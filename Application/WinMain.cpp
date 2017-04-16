@@ -1,10 +1,8 @@
 
 // include the basic windows header file
-#include "WindowHelper.h"
-#include "Dx11Device.h"
+#include "Dx11Base/WindowHelper.h"
+#include "Dx11Base/Dx11Device.h"
 #include "Game.h"
-
-#include "Dx11Device.h"
 
 
 LRESULT CALLBACK WindowProcess(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)

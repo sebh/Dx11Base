@@ -1,6 +1,6 @@
 
 #include "Game.h"
-#include "Dx11Device.h"
+#include "Dx11Base/Dx11Device.h"
 
 // hack for testing
 RenderBuffer* vertexBuffer;
