@@ -27,3 +27,9 @@
 *.exe
 *.out
 *.app
+
+# Build folder
+x64
+
+# Visual Studio
+*.opendb
