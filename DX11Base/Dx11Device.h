@@ -264,12 +264,7 @@ public:
 	static void debugPrintTimer();
 	static void endFrame();
 
-private:
-	friend class Dx11Device;
-
-	DxGpuPerformance() = delete;
-	DxGpuPerformance(DxGpuPerformance&) = delete;
-
+	/// A timer data
 	struct DxGpuTimer
 	{
 		DxGpuTimer();
@@ -279,15 +274,40 @@ private:
 		ID3D11Query* mBeginQueries[V_GPU_TIMER_FRAMECOUNT];
 		ID3D11Query* mEndQueries[V_GPU_TIMER_FRAMECOUNT];
 
+		float mStartMs[V_GPU_TIMER_FRAMECOUNT];
+		float mEndMs[V_GPU_TIMER_FRAMECOUNT];
+		float mDurationMs[V_GPU_TIMER_FRAMECOUNT];
+
 		bool mUsedThisFrame = false;
 		bool mEnded = false;
 	};
+
+	/// Some structure that can be used to print out a frame timer graph
+	struct TimerGraphNode
+	{
+		std::string name;
+		DxGpuTimer* timer = nullptr;
+		std::vector<TimerGraphNode> subGraph;	// will result in lots of allocations but that will do for now...
+		TimerGraphNode* parent = nullptr;
+	};
+	typedef std::vector<TimerGraphNode> GpuTimerGraph;
+
+private:
+	friend class Dx11Device;
+
+	DxGpuPerformance() = delete;
+	DxGpuPerformance(DxGpuPerformance&) = delete;
 
 	typedef std::map<std::string, DxGpuTimer> GpuTimerMap;
 	static GpuTimerMap mTimers;
 	static int mMeasureTimerFrameId;
 	static int mReadTimerFrameId;
 	static int mGeneratedFrames;
+
+	// Double buffer so that we can display the previous frame timers while the current frame is being processed
+	static GpuTimerGraph mTimerGraphs[V_GPU_TIMER_FRAMECOUNT];
+	static bool mTimerGraphPrepared[V_GPU_TIMER_FRAMECOUNT];
+	static TimerGraphNode* mCurrentTimeGraph;
 };
 
 struct ScopedGpuTimer

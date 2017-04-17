@@ -82,9 +82,9 @@ int WINAPI WinMain(HINSTANCE hInstance,
 		}
 		else
 		{
+			DxGpuPerformance::startFrame();
 			const char* frameGpuTimerName = "Frame";
 			DxGpuPerformance::startGpuTimer(frameGpuTimerName);
-			DxGpuPerformance::startFrame();
 
 			ImGui_ImplDX11_NewFrame();
 
@@ -128,8 +128,8 @@ int WINAPI WinMain(HINSTANCE hInstance,
 			g_dx11Device->swap(true);
 
 			DxGpuPerformance::endGpuTimer(frameGpuTimerName);
-			DxGpuPerformance::debugPrintTimer();
 			DxGpuPerformance::endFrame();
+			DxGpuPerformance::debugPrintTimer();
 		}
 	}
 
