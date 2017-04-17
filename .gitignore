@@ -35,3 +35,5 @@ x64
 *.opendb
 *.db
 
+# RenderDoc
+*.cap
