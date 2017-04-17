@@ -74,9 +74,9 @@ int WINAPI WinMain(HINSTANCE hInstance,
 			if (msg.message == WM_SIZE && g_dx11Device != NULL && msg.wParam != SIZE_MINIMIZED)
 			{
 				ImGui_ImplDX11_InvalidateDeviceObjects();
-				// clean up data;		// TODO
+				// clean up gpu data;		// TODO release swap chain, context and device
 				g_dx11Device->getSwapChain()->ResizeBuffers(0, (UINT)LOWORD(msg.lParam), (UINT)HIWORD(msg.lParam), DXGI_FORMAT_UNKNOWN, 0);
-				// re create data();	// TODO
+				// re create gpu data();	// TODO
 				ImGui_ImplDX11_CreateDeviceObjects();
 			}
 		}
@@ -120,10 +120,8 @@ int WINAPI WinMain(HINSTANCE hInstance,
 					ImGui::ShowTestWindow();
 				}
 
-				GPU_BEGIN_EVENT("Imgui");
-				GPU_SCOPED_TIMER(Imgui);
+				GPU_SCOPED_TIMEREVENT(Imgui);
 				ImGui::Render();
-				GPU_END_EVENT();
 			}
 
 			// Swap the back buffer

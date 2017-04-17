@@ -55,19 +55,47 @@ private:
 
 extern Dx11Device* g_dx11Device;
 
-#if DX_DEBUG_EVENT
-#define GPU_BEGIN_EVENT(eventName) g_dx11Device->mUserDefinedAnnotation->BeginEvent(L""eventName)
-#define GPU_END_EVENT() g_dx11Device->mUserDefinedAnnotation->EndEvent()
-#else
-#define GPU_BEGIN_EVENT(eventName) 
-#define GPU_END_EVENT() 
-#endif
 
 #if DX_DEBUG_RESOURCE_NAME
 #define DX_SET_DEBUG_NAME(obj, debugName) obj->SetPrivateData(WKPDID_D3DDebugObjectName, sizeof(debugName), debugName)
 #else
 #define DX_SET_DEBUG_NAME(obj, debugName) 
 #endif
+
+#if DX_DEBUG_EVENT
+#define GPU_BEGIN_EVENT(eventName) g_dx11Device->mUserDefinedAnnotation->BeginEvent(L""#eventName)
+#define GPU_END_EVENT() g_dx11Device->mUserDefinedAnnotation->EndEvent()
+#else
+#define GPU_BEGIN_EVENT(eventName) 
+#define GPU_END_EVENT() 
+#endif
+
+struct ScopedGpuEvent
+{
+	ScopedGpuEvent(LPCWSTR name)
+		: mName(name)
+	{
+		g_dx11Device->mUserDefinedAnnotation->BeginEvent(mName);
+	}
+	~ScopedGpuEvent()
+	{
+		release();
+	}
+	void release()
+	{
+		if (!released)
+		{
+			released = true;
+			g_dx11Device->mUserDefinedAnnotation->EndEvent();
+		}
+	}
+private:
+	ScopedGpuEvent() = delete;
+	ScopedGpuEvent(ScopedGpuEvent&) = delete;
+	LPCWSTR mName;
+	bool released = false;
+};
+#define GPU_SCOPED_EVENT(timerName) ScopedGpuEvent gpuEvent##timerName##(L""#timerName)
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -288,6 +316,8 @@ private:
 	bool released = false;
 };
 #define GPU_SCOPED_TIMER(timerName) ScopedGpuTimer gpuTimer##timerName##(#timerName)
+
+#define GPU_SCOPED_TIMEREVENT(teName) GPU_SCOPED_EVENT(teName);GPU_SCOPED_TIMER(teName);
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////

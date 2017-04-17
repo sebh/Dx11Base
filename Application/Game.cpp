@@ -133,9 +133,7 @@ void Game::update()
 
 void Game::render()
 {
-	GPU_BEGIN_EVENT("Game::render");
-
-	GPU_SCOPED_TIMER(GameRender);
+	GPU_SCOPED_TIMEREVENT(GameRender);
 
 	ID3D11DeviceContext* context = g_dx11Device->getDeviceContext();
 	ID3D11RenderTargetView* backBuffer = g_dx11Device->getBackBufferRT();
@@ -207,8 +205,6 @@ void Game::render()
 		context->PSSetShader(pixelShaderFinal->mPixelShader, NULL, 0);
 		context->DrawIndexed(/*indexCount*/3, 0, 0);
 	}
-
-	GPU_END_EVENT();
 }
 
 
