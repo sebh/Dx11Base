@@ -249,6 +249,9 @@ private:
 ///  0: frame previous to current one in flight, done, data should be available
 #define V_GPU_TIMER_FRAMECOUNT 3
 
+/// Maximum number of timer in a frame and timer graph
+#define V_TIMER_MAX_COUNT 128
+
 class DxGpuPerformance
 {
 public:
@@ -264,33 +267,22 @@ public:
 	static void debugPrintTimer();
 	static void endFrame();
 
-	/// A timer data
-	struct DxGpuTimer
-	{
-		DxGpuTimer();
-		~DxGpuTimer();
-
-		ID3D11Query* mDisjointQueries[V_GPU_TIMER_FRAMECOUNT];
-		ID3D11Query* mBeginQueries[V_GPU_TIMER_FRAMECOUNT];
-		ID3D11Query* mEndQueries[V_GPU_TIMER_FRAMECOUNT];
-
-		float mStartMs[V_GPU_TIMER_FRAMECOUNT];
-		float mEndMs[V_GPU_TIMER_FRAMECOUNT];
-		float mDurationMs[V_GPU_TIMER_FRAMECOUNT];
-
-		bool mUsedThisFrame = false;
-		bool mEnded = false;
-	};
-
 	/// Some structure that can be used to print out a frame timer graph
+private:
+	struct DxGpuTimer;
+public:
 	struct TimerGraphNode
 	{
 		std::string name;
 		DxGpuTimer* timer = nullptr;
-		std::vector<TimerGraphNode> subGraph;	// will result in lots of allocations but that will do for now...
+		std::vector<TimerGraphNode*> subGraph;	// will result in lots of allocations but that will do for now...
 		TimerGraphNode* parent = nullptr;
+
+		float mLastStartMs;
+		float mLastEndMs;
+		float mLastDurationMs;
 	};
-	typedef std::vector<TimerGraphNode> GpuTimerGraph;
+	typedef std::vector<TimerGraphNode*> GpuTimerGraph;
 
 private:
 	friend class Dx11Device;
@@ -298,16 +290,45 @@ private:
 	DxGpuPerformance() = delete;
 	DxGpuPerformance(DxGpuPerformance&) = delete;
 
-	typedef std::map<std::string, DxGpuTimer> GpuTimerMap;
+	/// A timer data
+	struct DxGpuTimer
+	{
+		DxGpuTimer();
+		~DxGpuTimer();
+
+		void initialize();
+		void release();
+
+		ID3D11Query* mDisjointQueries[V_GPU_TIMER_FRAMECOUNT];
+		ID3D11Query* mBeginQueries[V_GPU_TIMER_FRAMECOUNT];
+		ID3D11Query* mEndQueries[V_GPU_TIMER_FRAMECOUNT];
+
+		TimerGraphNode* mNode = nullptr;
+
+		bool mUsedThisFrame = false;	// should be checked before querying data in case it is not used in some frames
+		bool mEnded = false;
+	};
+
+	typedef std::map<std::string, DxGpuTimer*> GpuTimerMap;
 	static GpuTimerMap mTimers;
 	static int mMeasureTimerFrameId;
 	static int mReadTimerFrameId;
+	static int mLastReadTimerFrameId;
 	static int mGeneratedFrames;
 
 	// Double buffer so that we can display the previous frame timers while the current frame is being processed
 	static GpuTimerGraph mTimerGraphs[V_GPU_TIMER_FRAMECOUNT];
-	static bool mTimerGraphPrepared[V_GPU_TIMER_FRAMECOUNT];
 	static TimerGraphNode* mCurrentTimeGraph;
+
+
+	
+	// TODO TODO TODO better comment qnd cleqn up the code
+	// Basically, node object are not in container as this can result in stale pointer. Instead we allocate in static arrays
+	// and container point to the static array. With such an approach, all pointer will remain valid over the desired lifetime (several frames)
+	static DxGpuTimer mTimerArray[V_TIMER_MAX_COUNT];
+	static int mAllocatedTimers;
+	static TimerGraphNode mTimerGraphNodeArray[V_GPU_TIMER_FRAMECOUNT][V_TIMER_MAX_COUNT];
+	static int mAllocatedTimerGraphNodes[V_GPU_TIMER_FRAMECOUNT];
 };
 
 struct ScopedGpuTimer

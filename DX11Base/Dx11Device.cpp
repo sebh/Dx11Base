@@ -366,66 +366,100 @@ ComputeShader::~ComputeShader()
 
 // static members
 DxGpuPerformance::GpuTimerMap DxGpuPerformance::mTimers;
-int DxGpuPerformance::mMeasureTimerFrameId;	// first frame
-int DxGpuPerformance::mReadTimerFrameId;	// invalid
+int DxGpuPerformance::mMeasureTimerFrameId;
+int DxGpuPerformance::mReadTimerFrameId;
+int DxGpuPerformance::mLastReadTimerFrameId = -1;
 int DxGpuPerformance::mGeneratedFrames;
 
+DxGpuPerformance::DxGpuTimer DxGpuPerformance::mTimerArray[V_TIMER_MAX_COUNT];
+int DxGpuPerformance::mAllocatedTimers = 0;
+
+DxGpuPerformance::TimerGraphNode DxGpuPerformance::mTimerGraphNodeArray[V_GPU_TIMER_FRAMECOUNT][V_TIMER_MAX_COUNT];
+int DxGpuPerformance::mAllocatedTimerGraphNodes[V_GPU_TIMER_FRAMECOUNT] = {0,0,0};
+
 DxGpuPerformance::GpuTimerGraph DxGpuPerformance::mTimerGraphs[V_GPU_TIMER_FRAMECOUNT];
-bool DxGpuPerformance::mTimerGraphPrepared[V_GPU_TIMER_FRAMECOUNT];
 DxGpuPerformance::TimerGraphNode* DxGpuPerformance::mCurrentTimeGraph = nullptr;
 
 void DxGpuPerformance::initialise()
 {
 	mTimers.clear();
 
-	mMeasureTimerFrameId = 0;
-	mReadTimerFrameId = -1;
+	mMeasureTimerFrameId = 0;		// first frame
+	mReadTimerFrameId = 0;			// invalid
+	mLastReadTimerFrameId = -1;		// invalid
 	mGeneratedFrames = 0;
 }
 void DxGpuPerformance::shutdown()
 {
+	for (int i = 0; i < mAllocatedTimers; ++i)
+		mTimerArray[i].release();
 	mTimers.clear();
 }
 
 void DxGpuPerformance::startFrame()
 {
 	// Clear the frame we are going to measure and append root timer node
-	TimerGraphNode root;
-	root.name = "root";
+	for (int i = 0, cnt = mAllocatedTimerGraphNodes[mMeasureTimerFrameId]; i < cnt; ++i)
+		mTimerGraphNodeArray[mMeasureTimerFrameId][i].subGraph.clear();
+	mAllocatedTimerGraphNodes[mMeasureTimerFrameId] = 0; // reset the counter
+	TimerGraphNode* root = &mTimerGraphNodeArray [mMeasureTimerFrameId] [mAllocatedTimerGraphNodes[mMeasureTimerFrameId]++];
+	root->name = "root";
 	mTimerGraphs[mMeasureTimerFrameId].clear();
+	{
+		char debugStr[64];
+		sprintf_s(debugStr, 64, "clear %i \n", mMeasureTimerFrameId);
+		OutputDebugStringA(debugStr);
+	}
 	mTimerGraphs[mMeasureTimerFrameId].push_back(root);
-	mCurrentTimeGraph = &(*mTimerGraphs[mMeasureTimerFrameId].begin());
+	mCurrentTimeGraph = (*mTimerGraphs[mMeasureTimerFrameId].begin());
 }
 
 void DxGpuPerformance::startGpuTimer(const char* name)
 {
-	DxGpuTimer& timer = mTimers[name];
+	GpuTimerMap::iterator it = mTimers.find(name);
+	DxGpuTimer* timer = nullptr;
+	if (it == mTimers.end())
+	{
+		// Allocate a timer and insert into the map
+		ATLASSERT(mAllocatedTimers<(V_TIMER_MAX_COUNT-1));
+		timer = &mTimerArray[mAllocatedTimers++];
+		mTimers[name] = timer;
+		timer->initialize();
+	}
+	else
+	{
+		ATLASSERT(!(*it).second->mUsedThisFrame);	// a timer can only be used once a frame
+		timer = (*it).second;
+	}
 
 	ID3D11DeviceContext* context = g_dx11Device->getDeviceContext();
-	context->Begin(timer.mDisjointQueries[mMeasureTimerFrameId]);
-	context->End(timer.mBeginQueries[mMeasureTimerFrameId]);
+	context->Begin(timer->mDisjointQueries[mMeasureTimerFrameId]);
+	context->End(timer->mBeginQueries[mMeasureTimerFrameId]);
 
 	// Make sure we do not add the timer twice per frame
-	ATLASSERT(!timer.mUsedThisFrame);
-	timer.mUsedThisFrame = true;
+	ATLASSERT(!timer->mUsedThisFrame);
+	timer->mUsedThisFrame = true;
 
 	// Push the timer node we just started
-	TimerGraphNode node;
-	node.name = name;
-	node.timer = &timer;
-	node.parent = mCurrentTimeGraph;
+	ATLASSERT(mAllocatedTimerGraphNodes[mMeasureTimerFrameId]<(V_TIMER_MAX_COUNT - 1));
+	TimerGraphNode* node = &mTimerGraphNodeArray[mMeasureTimerFrameId][mAllocatedTimerGraphNodes[mMeasureTimerFrameId]++];
+	node->name = name;
+	node->timer = timer;
+	node->parent = mCurrentTimeGraph;
 	mCurrentTimeGraph->subGraph.push_back(node);
-	mCurrentTimeGraph = &(*mCurrentTimeGraph->subGraph.rbegin());
+	mCurrentTimeGraph = (*mCurrentTimeGraph->subGraph.rbegin());
+	timer->mNode = mCurrentTimeGraph;
+								// TO SOLVE: have static array of node 
 }
 
 void DxGpuPerformance::endGpuTimer(const char* name)
 {
-	DxGpuTimer& timer = mTimers[name];
+	DxGpuTimer* timer = mTimers[name];
 
 	ID3D11DeviceContext* context = g_dx11Device->getDeviceContext();
-	context->End(timer.mDisjointQueries[mMeasureTimerFrameId]);
-	context->End(timer.mEndQueries[mMeasureTimerFrameId]);
-	timer.mEnded = true;
+	context->End(timer->mDisjointQueries[mMeasureTimerFrameId]);
+	context->End(timer->mEndQueries[mMeasureTimerFrameId]);
+	timer->mEnded = true;
 
 	// Pop to the parent of the timer node that has just ended
 	mCurrentTimeGraph = mCurrentTimeGraph->parent;
@@ -437,34 +471,44 @@ void DxGpuPerformance::endFrame()
 	// Fetch data from ready timer
 	if (mMeasureTimerFrameId >= 0 && mGeneratedFrames >= (V_GPU_TIMER_FRAMECOUNT - 1))
 	{
+		{
+			char debugStr[64];
+			sprintf_s(debugStr, 64, "update %i \n", mReadTimerFrameId);
+			OutputDebugStringA(debugStr);
+		}
+
 		ID3D11DeviceContext* context = g_dx11Device->getDeviceContext();
 		DxGpuPerformance::GpuTimerMap::iterator it;
 		for (it = mTimers.begin(); it != mTimers.end(); it++)
 		{
-			DxGpuPerformance::DxGpuTimer& timer = (*it).second;
-			if (!timer.mUsedThisFrame)	// we should test usePreviousFrame but that will be enough for now
+			DxGpuPerformance::DxGpuTimer* timer = (*it).second;
+			if (!timer->mUsedThisFrame)	// we should test usePreviousFrame but that will be enough for now
 				continue;
-			ATLASSERT(timer.mEnded);	// the timer must have been ended this frame
+			ATLASSERT(timer->mEnded);	// the timer must have been ended this frame
+			ATLASSERT(timer->mNode);
 
 			UINT64 startTime = 0;
-			while (context->GetData(timer.mBeginQueries[mReadTimerFrameId], &startTime, sizeof(startTime), 0) != S_OK);
+			while (context->GetData(timer->mBeginQueries[mReadTimerFrameId], &startTime, sizeof(startTime), 0) != S_OK);
 
 			UINT64 endTime = 0;
-			while (context->GetData(timer.mEndQueries[mReadTimerFrameId], &endTime, sizeof(endTime), 0) != S_OK);
+			while (context->GetData(timer->mEndQueries[mReadTimerFrameId], &endTime, sizeof(endTime), 0) != S_OK);
 
 			D3D11_QUERY_DATA_TIMESTAMP_DISJOINT disjointData;
-			while (context->GetData(timer.mDisjointQueries[mReadTimerFrameId], &disjointData, sizeof(D3D11_QUERY_DATA_TIMESTAMP_DISJOINT), 0) != S_OK);
+			while (context->GetData(timer->mDisjointQueries[mReadTimerFrameId], &disjointData, sizeof(D3D11_QUERY_DATA_TIMESTAMP_DISJOINT), 0) != S_OK);
 
 			float gpuTimeMs = 0.0f;
 			if (disjointData.Disjoint == FALSE)
 			{
 				float factor = 1000.0f / float(disjointData.Frequency);
 
-				timer.mStartMs[mReadTimerFrameId] = startTime * factor;
-				timer.mEndMs[mReadTimerFrameId] = endTime * factor;
-				timer.mDurationMs[mReadTimerFrameId] = (endTime - startTime) * factor;
+				timer->mNode->mLastStartMs = startTime * factor;
+				timer->mNode->mLastEndMs = endTime * factor;
+				timer->mNode->mLastDurationMs = (endTime - startTime) * factor;
 			}
+
+			int i = 0;
 		}
+		mLastReadTimerFrameId = mReadTimerFrameId;
 	}
 
 	// Move onto next frame
@@ -476,9 +520,9 @@ void DxGpuPerformance::endFrame()
 	DxGpuPerformance::GpuTimerMap::iterator it;
 	for (it = mTimers.begin(); it != mTimers.end(); it++)
 	{
-		DxGpuPerformance::DxGpuTimer& timer = (*it).second;
-		timer.mUsedThisFrame = false;
-		timer.mEnded = false;
+		DxGpuPerformance::DxGpuTimer* timer = (*it).second;
+		timer->mUsedThisFrame = false;
+		timer->mEnded = false;
 	}
 }
 
@@ -488,31 +532,35 @@ void debugPrintTimerRecurse(DxGpuPerformance::TimerGraphNode* node, int level)
 		OutputDebugStringA("\t");
 
 	char debugStr[64];
-	sprintf_s(debugStr, 64, " - %s %f\n", node->name.c_str(), node->timer->mDurationMs[0]);
+	sprintf_s(debugStr, 64, " - %s %f\n", node->name.c_str(), node->mLastDurationMs);
 	OutputDebugStringA(debugStr);
 
 	for (auto& node : node->subGraph)
 	{
-		debugPrintTimerRecurse(&node, level + 1);
+		debugPrintTimerRecurse(node, level + 1);
 	}
 
 }
 
 void DxGpuPerformance::debugPrintTimer()
 {
-	// we read after the current data we are going to get from the API to make sure it is there 
-	int ReadTimerFrameId = (mMeasureTimerFrameId + 1) % V_GPU_TIMER_FRAMECOUNT;
-
-	if (mGeneratedFrames >= (V_GPU_TIMER_FRAMECOUNT*2)) // make sure we print when we have data
+	if (mLastReadTimerFrameId!=-1) // make sure we print when we have data
 	{
 		ID3D11DeviceContext* context = g_dx11Device->getDeviceContext();
 		OutputDebugStringA("========== GPU TIMERS ==========\n");
 
 		// Get the root node of the timer graph (always the first element, we do not process it, just parse its children)
-		TimerGraphNode* rootNode = &(*mTimerGraphs[mMeasureTimerFrameId].begin());
+		TimerGraphNode* rootNode = (*mTimerGraphs[mLastReadTimerFrameId].begin());
+
+		{
+			char debugStr[64];
+			sprintf_s(debugStr, 64, "parse %i \n", mLastReadTimerFrameId);
+			OutputDebugStringA(debugStr);
+		}
+
 		for (auto& node : rootNode->subGraph)
 		{
-			debugPrintTimerRecurse(&node, 0);
+			debugPrintTimerRecurse(node, 0);
 		}
 
 		OutputDebugStringA("================================\n");
@@ -520,6 +568,14 @@ void DxGpuPerformance::debugPrintTimer()
 }
 
 DxGpuPerformance::DxGpuTimer::DxGpuTimer()
+{
+}
+
+DxGpuPerformance::DxGpuTimer::~DxGpuTimer()
+{
+}
+
+void DxGpuPerformance::DxGpuTimer::initialize()
 {
 	ID3D11Device* device = g_dx11Device->getDevice();
 	D3D11_QUERY_DESC queryDesc;
@@ -535,8 +591,7 @@ DxGpuPerformance::DxGpuTimer::DxGpuTimer()
 		device->CreateQuery(&queryDesc, &mEndQueries[i]);
 	}
 }
-
-DxGpuPerformance::DxGpuTimer::~DxGpuTimer()
+void DxGpuPerformance::DxGpuTimer::release()
 {
 	ID3D11Device* device = g_dx11Device->getDevice();
 	for (int i = 0; i < V_GPU_TIMER_FRAMECOUNT; ++i)
@@ -546,7 +601,6 @@ DxGpuPerformance::DxGpuTimer::~DxGpuTimer()
 		mEndQueries[i]->Release();
 	}
 }
-
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
