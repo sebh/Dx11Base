@@ -99,8 +99,8 @@ int WINAPI WinMain(HINSTANCE hInstance,
 
 			// Render UI
 			{
-				ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiSetCond_FirstUseEver);     // Normally user code doesn't need/want to call it because positions are saved in .ini file anyway. Here we just want to make the demo initial state a bit more friendly!
-				ImGui::ShowTestWindow();
+				//ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiSetCond_FirstUseEver);     // Normally user code doesn't need/want to call it because positions are saved in .ini file anyway. Here we just want to make the demo initial state a bit more friendly!
+				//ImGui::ShowTestWindow();
 
 				// Gpu performance timer graph
 				const DxGpuPerformance::TimerGraphNode* timerGraphRootNode = DxGpuPerformance::getLastUpdatedTimerGraphRootNode();
@@ -108,33 +108,6 @@ int WINAPI WinMain(HINSTANCE hInstance,
 				{
 					ImGui::SetNextWindowSize(ImVec2(400, 400), ImGuiSetCond_FirstUseEver);
 					ImGui::Begin("GPU performance");
-
-					//////////////////////////////////////////////////////////////
-
-					// static lambda function needed for local definition
-					static void (*textPrintTimerGraphRecurse)(const DxGpuPerformance::TimerGraphNode*, int)
-						= [](const DxGpuPerformance::TimerGraphNode* node, int level) -> void
-					{
-						char* levelOffset = "---------------";	// 16 chars
-						char* levelOffsetPtr = levelOffset + max(0, 16 - 2*level - 1); // cheap way to add shifting to a printf
-
-						char debugStr[128];
-						sprintf_s(debugStr, 128, "%s%s %.3f ms\n", levelOffsetPtr, node->name.c_str(), node->mLastDurationMs);
-					#if 0
-						OutputDebugStringA(debugStr);
-					#else
-						ImGui::TextColored(ImVec4(node->r, node->g, node->b, 1.0f), debugStr);
-					#endif
-
-						for (auto& node : node->subGraph)
-						{
-							textPrintTimerGraphRecurse(node, level + 1);
-						}
-					};
-					for (auto& node : timerGraphRootNode->subGraph)
-					{
-						textPrintTimerGraphRecurse(node, 0);
-					}
 
 					//////////////////////////////////////////////////////////////
 
@@ -201,6 +174,33 @@ int WINAPI WinMain(HINSTANCE hInstance,
 					}
 					ImGui::EndChild();
 					ImGui::PopStyleVar(3);
+
+					//////////////////////////////////////////////////////////////
+
+					// static lambda function needed for local definition
+					static void(*textPrintTimerGraphRecurse)(const DxGpuPerformance::TimerGraphNode*, int)
+						= [](const DxGpuPerformance::TimerGraphNode* node, int level) -> void
+					{
+						char* levelOffset = "---------------";	// 16 chars
+						char* levelOffsetPtr = levelOffset + max(0, 16 - 2 * level - 1); // cheap way to add shifting to a printf
+
+						char debugStr[128];
+						sprintf_s(debugStr, 128, "%s%s %.3f ms\n", levelOffsetPtr, node->name.c_str(), node->mLastDurationMs);
+#if 0
+						OutputDebugStringA(debugStr);
+#else
+						ImGui::TextColored(ImVec4(node->r, node->g, node->b, 1.0f), debugStr);
+#endif
+
+						for (auto& node : node->subGraph)
+						{
+							textPrintTimerGraphRecurse(node, level + 1);
+						}
+					};
+					for (auto& node : timerGraphRootNode->subGraph)
+					{
+						textPrintTimerGraphRecurse(node, 0);
+					}
 
 					//////////////////////////////////////////////////////////////
 
