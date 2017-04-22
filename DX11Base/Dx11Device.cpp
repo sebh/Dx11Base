@@ -501,8 +501,6 @@ void DxGpuPerformance::endFrame()
 			{
 				float factor = 1000.0f / float(disjointData.Frequency);
 
-				timer->mNode->mLastStartMs = startTime * factor;
-				timer->mNode->mLastEndMs = endTime * factor;
 				timer->mNode->mLastDurationMs = (endTime - startTime) * factor;
 			}
 
@@ -565,6 +563,15 @@ void DxGpuPerformance::debugPrintTimer()
 
 		OutputDebugStringA("================================\n");
 	}
+}
+
+const DxGpuPerformance::TimerGraphNode* DxGpuPerformance::getLastUpdatedTimerGraphRootNode()
+{
+	if (mLastReadTimerFrameId != -1)
+	{
+		return *mTimerGraphs[mLastReadTimerFrameId].begin();
+	}
+	return nullptr;
 }
 
 DxGpuPerformance::DxGpuTimer::DxGpuTimer()

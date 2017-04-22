@@ -120,6 +120,33 @@ int WINAPI WinMain(HINSTANCE hInstance,
 					ImGui::ShowTestWindow();
 				}
 
+				// Gpu performance timer graph
+				const DxGpuPerformance::TimerGraphNode* timerGraphRootNode = DxGpuPerformance::getLastUpdatedTimerGraphRootNode();
+				if(timerGraphRootNode)
+				{
+					// static lambda function needed for local definition
+					static void (*imguiPrintTimerGraphRecurse)(const DxGpuPerformance::TimerGraphNode*, int)
+						= [](const DxGpuPerformance::TimerGraphNode* node, int level) -> void
+					{
+						for (int l = 0; l<level; l++)
+							OutputDebugStringA("\t");
+
+						char debugStr[64];
+						sprintf_s(debugStr, 64, " - %s %f\n", node->name.c_str(), node->mLastDurationMs);
+						OutputDebugStringA(debugStr);
+
+						for (auto& node : node->subGraph)
+						{
+							imguiPrintTimerGraphRecurse(node, level + 1);
+						}
+					};
+
+					for (auto& node : timerGraphRootNode->subGraph)
+					{
+						imguiPrintTimerGraphRecurse(node, 0);
+					}
+				}
+
 				GPU_SCOPED_TIMEREVENT(Imgui);
 				ImGui::Render();
 			}

@@ -247,7 +247,7 @@ private:
 ///  2: current frame added to context commend buffer
 ///  1: frame currently in flight
 ///  0: frame previous to current one in flight, done, data should be available
-#define V_GPU_TIMER_FRAMECOUNT 3
+#define V_GPU_TIMER_FRAMECOUNT 5
 
 /// Maximum number of timer in a frame and timer graph
 #define V_TIMER_MAX_COUNT 128
@@ -278,11 +278,11 @@ public:
 		std::vector<TimerGraphNode*> subGraph;	// will result in lots of allocations but that will do for now...
 		TimerGraphNode* parent = nullptr;
 
-		float mLastStartMs;
-		float mLastEndMs;
 		float mLastDurationMs;
 	};
 	typedef std::vector<TimerGraphNode*> GpuTimerGraph;
+
+	static const TimerGraphNode* getLastUpdatedTimerGraphRootNode();
 
 private:
 	friend class Dx11Device;
