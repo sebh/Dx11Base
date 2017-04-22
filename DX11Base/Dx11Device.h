@@ -247,7 +247,7 @@ private:
 ///  2: current frame added to context commend buffer
 ///  1: frame currently in flight
 ///  0: frame previous to current one in flight, done, data should be available
-#define V_GPU_TIMER_FRAMECOUNT 5
+#define V_GPU_TIMER_FRAMECOUNT 3
 
 /// Maximum number of timer in a frame and timer graph
 #define V_TIMER_MAX_COUNT 128
@@ -260,11 +260,10 @@ public:
 	static void shutdown();
 
 	/// Limitation as of today: each timer must have different name
-	static void startGpuTimer(const char* name);
+	static void startGpuTimer(const char* name, unsigned char r, unsigned char g, unsigned char  b);
 	static void endGpuTimer(const char* name);
 
 	static void startFrame();
-	static void debugPrintTimer();
 	static void endFrame();
 
 	/// Some structure that can be used to print out a frame timer graph
@@ -274,10 +273,19 @@ public:
 	struct TimerGraphNode
 	{
 		std::string name;
+		float r, g, b;
 		DxGpuTimer* timer = nullptr;
 		std::vector<TimerGraphNode*> subGraph;	// will result in lots of allocations but that will do for now...
 		TimerGraphNode* parent = nullptr;
 
+		// A bit too much to store all that raw data but convenient for now
+		UINT64 mBeginTick;
+		UINT64 mEndTick;
+		UINT64 mLastDurationTick;
+		D3D11_QUERY_DATA_TIMESTAMP_DISJOINT disjointData;
+		// Converted and extracted data
+		float mBeginMs;
+		float mEndMs;
 		float mLastDurationMs;
 	};
 	typedef std::vector<TimerGraphNode*> GpuTimerGraph;
@@ -333,10 +341,10 @@ private:
 
 struct ScopedGpuTimer
 {
-	ScopedGpuTimer(const char* name)
+	ScopedGpuTimer(const char* name, unsigned char r, unsigned char g, unsigned char b)
 		: mName(name)
 	{
-		DxGpuPerformance::startGpuTimer(mName);
+		DxGpuPerformance::startGpuTimer(mName, r, g, b);
 	}
 	~ScopedGpuTimer()
 	{
@@ -356,9 +364,9 @@ private:
 	const char* mName;
 	bool released = false;
 };
-#define GPU_SCOPED_TIMER(timerName) ScopedGpuTimer gpuTimer##timerName##(#timerName)
+#define GPU_SCOPED_TIMER(timerName, r, g, b) ScopedGpuTimer gpuTimer##timerName##(#timerName, r, g, b)
 
-#define GPU_SCOPED_TIMEREVENT(teName) GPU_SCOPED_EVENT(teName);GPU_SCOPED_TIMER(teName);
+#define GPU_SCOPED_TIMEREVENT(teName, r, g, b) GPU_SCOPED_EVENT(teName);GPU_SCOPED_TIMER(teName, r, g, b);
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////

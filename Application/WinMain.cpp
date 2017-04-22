@@ -28,6 +28,9 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	LPSTR lpCmdLine,
 	int nCmdShow)
 {
+	static bool sVSyncEnable = true;
+	static float sTimerGraphWidth = 18.0f;
+
 	// Get a window size that matches the desired client size
 	const unsigned int desiredPosX = 20;
 	const unsigned int desiredPosY = 20;
@@ -84,7 +87,7 @@ int WINAPI WinMain(HINSTANCE hInstance,
 		{
 			DxGpuPerformance::startFrame();
 			const char* frameGpuTimerName = "Frame";
-			DxGpuPerformance::startGpuTimer(frameGpuTimerName);
+			DxGpuPerformance::startGpuTimer(frameGpuTimerName, 150, 150, 150);
 
 			ImGui_ImplDX11_NewFrame();
 
@@ -96,67 +99,122 @@ int WINAPI WinMain(HINSTANCE hInstance,
 
 			// Render UI
 			{
-				// TEST IMGUI FOR NOW
-				static ImVec4 clear_col = ImColor(114, 144, 154);
-				// 1. Show a simple window
-				// Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets appears in a window automatically called "Debug"
-				{
-					static float f = 0.0f;
-					ImGui::Text("Hello, world!");
-					ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
-					ImGui::ColorEdit3("clear color", (float*)&clear_col);
-					ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-				}
-				// 2. Show another simple window, this time using an explicit Begin/End pair
-				{
-					ImGui::SetNextWindowSize(ImVec2(200, 100), ImGuiSetCond_FirstUseEver);
-					ImGui::Begin("Another Window");
-					ImGui::Text("Hello");
-					ImGui::End();
-				}
-				// 3. Show the ImGui test window. Most of the sample code is in ImGui::ShowTestWindow()
-				{
-					ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiSetCond_FirstUseEver);     // Normally user code doesn't need/want to call it because positions are saved in .ini file anyway. Here we just want to make the demo initial state a bit more friendly!
-					ImGui::ShowTestWindow();
-				}
+				ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiSetCond_FirstUseEver);     // Normally user code doesn't need/want to call it because positions are saved in .ini file anyway. Here we just want to make the demo initial state a bit more friendly!
+				ImGui::ShowTestWindow();
 
 				// Gpu performance timer graph
 				const DxGpuPerformance::TimerGraphNode* timerGraphRootNode = DxGpuPerformance::getLastUpdatedTimerGraphRootNode();
 				if(timerGraphRootNode)
 				{
+					ImGui::SetNextWindowSize(ImVec2(400, 400), ImGuiSetCond_FirstUseEver);
+					ImGui::Begin("GPU performance");
+
+					//////////////////////////////////////////////////////////////
+
 					// static lambda function needed for local definition
-					static void (*imguiPrintTimerGraphRecurse)(const DxGpuPerformance::TimerGraphNode*, int)
+					static void (*textPrintTimerGraphRecurse)(const DxGpuPerformance::TimerGraphNode*, int)
 						= [](const DxGpuPerformance::TimerGraphNode* node, int level) -> void
 					{
-						for (int l = 0; l<level; l++)
-							OutputDebugStringA("\t");
+						char* levelOffset = "---------------";	// 16 chars
+						char* levelOffsetPtr = levelOffset + max(0, 16 - 2*level - 1); // cheap way to add shifting to a printf
 
-						char debugStr[64];
-						sprintf_s(debugStr, 64, " - %s %f\n", node->name.c_str(), node->mLastDurationMs);
+						char debugStr[128];
+						sprintf_s(debugStr, 128, "%s%s %.3f ms\n", levelOffsetPtr, node->name.c_str(), node->mLastDurationMs);
+					#if 0
 						OutputDebugStringA(debugStr);
+					#else
+						ImGui::TextColored(ImVec4(node->r, node->g, node->b, 1.0f), debugStr);
+					#endif
 
 						for (auto& node : node->subGraph)
 						{
-							imguiPrintTimerGraphRecurse(node, level + 1);
+							textPrintTimerGraphRecurse(node, level + 1);
 						}
 					};
-
 					for (auto& node : timerGraphRootNode->subGraph)
 					{
-						imguiPrintTimerGraphRecurse(node, 0);
+						textPrintTimerGraphRecurse(node, 0);
 					}
+
+					//////////////////////////////////////////////////////////////
+
+					ImGui::Checkbox("VSync", &sVSyncEnable);
+					ImGui::SliderFloat("TimerGraphWidth (ms)", &sTimerGraphWidth, 1.0, 60.0);
+
+					static bool(*imguiPrintTimerGraphRecurse)(const DxGpuPerformance::TimerGraphNode*, int, int)
+						= [](const DxGpuPerformance::TimerGraphNode* node, int level, int targetLevel) -> bool
+					{
+						const float maxWith = ImGui::GetWindowWidth();
+						const float msToPixel = maxWith / sTimerGraphWidth;
+
+						bool printDone = false;
+						if (level == targetLevel)
+						{
+							ImColor color = ImColor(node->r, node->g, node->b);
+							ImGui::PushStyleColor(ImGuiCol_Button, color);
+							ImGui::PushStyleColor(ImGuiCol_ButtonHovered, color);
+							ImGui::PushStyleColor(ImGuiCol_ButtonActive, color);
+							if (node->mLastDurationMs > 0.0f)
+							{
+								// Set cursor to the right position
+								ImGui::SetCursorPosX(node->mBeginMs * msToPixel);
+
+								ImGui::PushItemWidth(node->mLastDurationMs * msToPixel);
+								char debugStr[128];
+								sprintf_s(debugStr, 128, "%s %.3f ms\n", node->name.c_str(), node->mLastDurationMs);
+								ImGui::Button(debugStr, ImVec2(node->mLastDurationMs * msToPixel, 0.0f));
+								if (ImGui::IsItemHovered())
+								{
+									ImGui::SetTooltip(debugStr);
+								}
+								ImGui::SameLine();
+								ImGui::PopItemWidth();
+							}
+							printDone = true;
+							ImGui::PopStyleColor(3);
+						}
+
+						if (level >= targetLevel)
+							return printDone;
+
+						for (auto& node : node->subGraph)
+						{
+							printDone |= imguiPrintTimerGraphRecurse(node, level + 1, targetLevel);
+						}
+
+						return printDone;
+					};
+
+					ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 3.0f);
+					ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2.0f, 2.0f));
+					ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.0f, 0.0f));
+					ImGui::BeginChild("Timer graph", ImVec2(0, 150), true, ImGuiWindowFlags_HorizontalScrollbar);
+					for (int targetLevel = 0; targetLevel < 16; ++targetLevel)
+					{
+						bool printDone = false;
+						for (auto& node : timerGraphRootNode->subGraph)
+						{
+							printDone |=  imguiPrintTimerGraphRecurse(node, 0, targetLevel);
+						}
+						if(printDone)
+							ImGui::NewLine();
+					}
+					ImGui::EndChild();
+					ImGui::PopStyleVar(3);
+
+					//////////////////////////////////////////////////////////////
+
+					ImGui::End();
 				}
 
-				GPU_SCOPED_TIMEREVENT(Imgui);
+				GPU_SCOPED_TIMEREVENT(Imgui, 0, 162, 232);
 				ImGui::Render();
 			}
 
 			// Swap the back buffer
-			g_dx11Device->swap(true);
-
+			g_dx11Device->swap(sVSyncEnable);
 			DxGpuPerformance::endGpuTimer(frameGpuTimerName);
 			DxGpuPerformance::endFrame();
-			DxGpuPerformance::debugPrintTimer();
 		}
 	}
 
