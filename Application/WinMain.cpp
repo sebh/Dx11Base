@@ -102,7 +102,7 @@ int WINAPI WinMain(HINSTANCE hInstance,
 				//ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiSetCond_FirstUseEver);     // Normally user code doesn't need/want to call it because positions are saved in .ini file anyway. Here we just want to make the demo initial state a bit more friendly!
 				//ImGui::ShowTestWindow();
 
-				// Gpu performance timer graph
+				// Gpu performance timer graph debug print
 				const DxGpuPerformance::TimerGraphNode* timerGraphRootNode = DxGpuPerformance::getLastUpdatedTimerGraphRootNode();
 				if(timerGraphRootNode)
 				{
@@ -114,6 +114,7 @@ int WINAPI WinMain(HINSTANCE hInstance,
 					ImGui::Checkbox("VSync", &sVSyncEnable);
 					ImGui::SliderFloat("TimerGraphWidth (ms)", &sTimerGraphWidth, 1.0, 60.0);
 
+					// Lambda function parsing the timer graph and displaying it using horizontal bars
 					static bool(*imguiPrintTimerGraphRecurse)(const DxGpuPerformance::TimerGraphNode*, int, int)
 						= [](const DxGpuPerformance::TimerGraphNode* node, int level, int targetLevel) -> bool
 					{
@@ -129,10 +130,10 @@ int WINAPI WinMain(HINSTANCE hInstance,
 							ImGui::PushStyleColor(ImGuiCol_ButtonActive, color);
 							if (node->mLastDurationMs > 0.0f)
 							{
-								// Set cursor to the right position
+								// Set cursor to the correct position and size according to when things started this day
 								ImGui::SetCursorPosX(node->mBeginMs * msToPixel);
-
 								ImGui::PushItemWidth(node->mLastDurationMs * msToPixel);
+
 								char debugStr[128];
 								sprintf_s(debugStr, 128, "%s %.3f ms\n", node->name.c_str(), node->mLastDurationMs);
 								ImGui::Button(debugStr, ImVec2(node->mLastDurationMs * msToPixel, 0.0f));
@@ -170,14 +171,14 @@ int WINAPI WinMain(HINSTANCE hInstance,
 							printDone |=  imguiPrintTimerGraphRecurse(node, 0, targetLevel);
 						}
 						if(printDone)
-							ImGui::NewLine();
+							ImGui::NewLine(); // start a new line if anything has been printed
 					}
 					ImGui::EndChild();
 					ImGui::PopStyleVar(3);
 
 					//////////////////////////////////////////////////////////////
 
-					// static lambda function needed for local definition
+					// Lambda function parsing the timer graph and displaying it as text 
 					static void(*textPrintTimerGraphRecurse)(const DxGpuPerformance::TimerGraphNode*, int)
 						= [](const DxGpuPerformance::TimerGraphNode* node, int level) -> void
 					{
@@ -186,11 +187,11 @@ int WINAPI WinMain(HINSTANCE hInstance,
 
 						char debugStr[128];
 						sprintf_s(debugStr, 128, "%s%s %.3f ms\n", levelOffsetPtr, node->name.c_str(), node->mLastDurationMs);
-#if 0
+					#if 0
 						OutputDebugStringA(debugStr);
-#else
+					#else
 						ImGui::TextColored(ImVec4(node->r, node->g, node->b, 1.0f), debugStr);
-#endif
+					#endif
 
 						for (auto& node : node->subGraph)
 						{

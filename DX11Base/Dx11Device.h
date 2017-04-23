@@ -243,7 +243,7 @@ private:
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-/// Example with double buffering on why we should use at least 3 timer query in this case
+/// Example with double buffering on why we should use at least 3 timer query in this case (2 still works)
 ///  2: current frame added to context commend buffer
 ///  1: frame currently in flight
 ///  0: frame previous to current one in flight, done, data should be available
@@ -254,22 +254,26 @@ private:
 
 class DxGpuPerformance
 {
+private:
+	struct DxGpuTimer;
 public:
+	struct TimerGraphNode;
 
 	static void initialise();
 	static void shutdown();
 
-	/// Limitation as of today: each timer must have different name
+	/// Limitation as of today: each timer in a single frame must have different names
 	static void startGpuTimer(const char* name, unsigned char r, unsigned char g, unsigned char  b);
 	static void endGpuTimer(const char* name);
 
+	/// To call when starting to build render commands
 	static void startFrame();
+	/// To call after the back buffer swap
 	static void endFrame();
 
-	/// Some structure that can be used to print out a frame timer graph
-private:
-	struct DxGpuTimer;
-public:
+	// TODO: add a reset function for when resources needs to all be re-allocated
+
+	/// Some public structure that can be used to print out a frame timer graph
 	struct TimerGraphNode
 	{
 		std::string name;
@@ -278,27 +282,29 @@ public:
 		std::vector<TimerGraphNode*> subGraph;	// will result in lots of allocations but that will do for now...
 		TimerGraphNode* parent = nullptr;
 
+		// Converted and extracted data
+		float mBeginMs;
+		float mEndMs;
+		float mLastDurationMs;
+
+	private:
+		friend class DxGpuPerformance;
 		// A bit too much to store all that raw data but convenient for now
 		UINT64 mBeginTick;
 		UINT64 mEndTick;
 		UINT64 mLastDurationTick;
 		D3D11_QUERY_DATA_TIMESTAMP_DISJOINT disjointData;
-		// Converted and extracted data
-		float mBeginMs;
-		float mEndMs;
-		float mLastDurationMs;
 	};
 	typedef std::vector<TimerGraphNode*> GpuTimerGraph;
 
+	/// Returns the root node of the performance timer graph. This first root node contains nothing valid appart from childrens sub graphs.
 	static const TimerGraphNode* getLastUpdatedTimerGraphRootNode();
 
 private:
-	friend class Dx11Device;
-
 	DxGpuPerformance() = delete;
 	DxGpuPerformance(DxGpuPerformance&) = delete;
 
-	/// A timer data
+	/// The actual timer data storing the dx11 queries
 	struct DxGpuTimer
 	{
 		DxGpuTimer();
@@ -311,28 +317,25 @@ private:
 		ID3D11Query* mBeginQueries[V_GPU_TIMER_FRAMECOUNT];
 		ID3D11Query* mEndQueries[V_GPU_TIMER_FRAMECOUNT];
 
-		TimerGraphNode* mNode = nullptr;
+		/// The graph node associated to this timer
+		TimerGraphNode* mNode = nullptr;// TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO this should also be using V_GPU_TIMER_FRAMECOUNT, right now the last read frame matches this behavior
 
-		bool mUsedThisFrame = false;	// should be checked before querying data in case it is not used in some frames
-		bool mEnded = false;
+		bool mUsedThisFrame = false;	///! should be checked before querying data in case it is not used in some frames (also we only support one timer per name)
+		bool mEnded = false;			///! sanity check to make sure a stared element is ended
 	};
 
 	typedef std::map<std::string, DxGpuTimer*> GpuTimerMap;
-	static GpuTimerMap mTimers;
-	static int mMeasureTimerFrameId;
-	static int mReadTimerFrameId;
-	static int mLastReadTimerFrameId;
-	static int mGeneratedFrames;
+	static GpuTimerMap mTimers;			///! All the timers mapped using their name
+	static int mMeasureTimerFrameId;	///! Last measured frame (appended timer to command buffer)
+	static int mReadTimerFrameId;		///! Last frame we read the timer values from the api
+	static int mLastReadTimerFrameId;	///! Last frame we read the timers and they are still valid for debug print on screen (data from previous finished frame)
 
 	// Double buffer so that we can display the previous frame timers while the current frame is being processed
-	static GpuTimerGraph mTimerGraphs[V_GPU_TIMER_FRAMECOUNT];
-	static TimerGraphNode* mCurrentTimeGraph;
+	static GpuTimerGraph mTimerGraphs[V_GPU_TIMER_FRAMECOUNT];	///! Timer graphs of the last frames
+	static TimerGraphNode* mCurrentTimeGraph;					///! The current graph being filled up this frame
 
-
-	
-	// TODO TODO TODO better comment qnd cleqn up the code
-	// Basically, node object are not in container as this can result in stale pointer. Instead we allocate in static arrays
-	// and container point to the static array. With such an approach, all pointer will remain valid over the desired lifetime (several frames)
+	// Basically, node object are not in container as this can result in invalid/stale pointer when reallocated. Instead we allocate in static arrays
+	// and container point to the static array. With such an approach, all pointers will remain valid over the desired lifetime (several frames).
 	static DxGpuTimer mTimerArray[V_TIMER_MAX_COUNT];
 	static int mAllocatedTimers;
 	static TimerGraphNode mTimerGraphNodeArray[V_GPU_TIMER_FRAMECOUNT][V_TIMER_MAX_COUNT];
@@ -364,10 +367,9 @@ private:
 	const char* mName;
 	bool released = false;
 };
+
 #define GPU_SCOPED_TIMER(timerName, r, g, b) ScopedGpuTimer gpuTimer##timerName##(#timerName, r, g, b)
-
 #define GPU_SCOPED_TIMEREVENT(teName, r, g, b) GPU_SCOPED_EVENT(teName);GPU_SCOPED_TIMER(teName, r, g, b);
-
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////

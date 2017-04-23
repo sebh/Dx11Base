@@ -45,7 +45,7 @@ void Dx11Device::internalInitialise(const HWND& hWnd)
 	scd.BufferCount = 1;                                    // one back buffer
 	scd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;     // use 32-bit color
 	scd.BufferDesc.RefreshRate.Numerator = 1;				// 60fps target
-	scd.BufferDesc.RefreshRate.Denominator = 60;				// 60fps target
+	scd.BufferDesc.RefreshRate.Denominator = 60;			// 60fps target
 	scd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;      // how swap chain is to be used
 	scd.OutputWindow = hWnd;                                // the window to be used
 	scd.SampleDesc.Count = 1;                               // multisample
@@ -369,13 +369,12 @@ DxGpuPerformance::GpuTimerMap DxGpuPerformance::mTimers;
 int DxGpuPerformance::mMeasureTimerFrameId;
 int DxGpuPerformance::mReadTimerFrameId;
 int DxGpuPerformance::mLastReadTimerFrameId;
-int DxGpuPerformance::mGeneratedFrames;
 
 DxGpuPerformance::DxGpuTimer DxGpuPerformance::mTimerArray[V_TIMER_MAX_COUNT];
 int DxGpuPerformance::mAllocatedTimers;
 
 DxGpuPerformance::TimerGraphNode DxGpuPerformance::mTimerGraphNodeArray[V_GPU_TIMER_FRAMECOUNT][V_TIMER_MAX_COUNT];
-int DxGpuPerformance::mAllocatedTimerGraphNodes[V_GPU_TIMER_FRAMECOUNT] = {0,0,0};
+int DxGpuPerformance::mAllocatedTimerGraphNodes[V_GPU_TIMER_FRAMECOUNT];
 
 DxGpuPerformance::GpuTimerGraph DxGpuPerformance::mTimerGraphs[V_GPU_TIMER_FRAMECOUNT];
 DxGpuPerformance::TimerGraphNode* DxGpuPerformance::mCurrentTimeGraph = nullptr;
@@ -388,7 +387,6 @@ void DxGpuPerformance::initialise()
 	mMeasureTimerFrameId = 0;							// first frame
 	mReadTimerFrameId = -V_GPU_TIMER_FRAMECOUNT+1;		// invalid
 	mLastReadTimerFrameId = -V_GPU_TIMER_FRAMECOUNT-1;	// invalid
-	mGeneratedFrames = 0;
 }
 void DxGpuPerformance::shutdown()
 {
@@ -470,7 +468,7 @@ void DxGpuPerformance::endGpuTimer(const char* name)
 void DxGpuPerformance::endFrame()
 {
 	// Fetch data from ready timer
-	if (mReadTimerFrameId >= 0)// && mGeneratedFrames >= (V_GPU_TIMER_FRAMECOUNT - 1))
+	if (mReadTimerFrameId >= 0)
 	{
 		int localReadTimerFrameId = mReadTimerFrameId%V_GPU_TIMER_FRAMECOUNT;
 
@@ -505,8 +503,13 @@ void DxGpuPerformance::endFrame()
 		for (it = mTimers.begin(); it != mTimers.end(); it++)
 		{
 			DxGpuPerformance::DxGpuTimer* timer = (*it).second;
+
 			if (!timer->mUsedThisFrame)	// we should test usePreviousFrame but that will be enough for now
 				continue;
+
+			// Reset the safety checks
+			timer->mUsedThisFrame = false;
+			timer->mEnded = false;
 
 			float beginMs = 0.0f;
 			float endMs = 0.0f;
@@ -528,16 +531,6 @@ void DxGpuPerformance::endFrame()
 	mReadTimerFrameId++;
 	mMeasureTimerFrameId = (mMeasureTimerFrameId + 1) % V_GPU_TIMER_FRAMECOUNT;
 	mLastReadTimerFrameId++;
-	mGeneratedFrames++;
-
-	// Reset the safety checks
-	DxGpuPerformance::GpuTimerMap::iterator it;
-	for (it = mTimers.begin(); it != mTimers.end(); it++)
-	{
-		DxGpuPerformance::DxGpuTimer* timer = (*it).second;
-		timer->mUsedThisFrame = false;
-		timer->mEnded = false;
-	}
 }
 
 const DxGpuPerformance::TimerGraphNode* DxGpuPerformance::getLastUpdatedTimerGraphRootNode()
