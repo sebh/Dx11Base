@@ -447,7 +447,7 @@ void DxGpuPerformance::startGpuTimer(const char* name, unsigned char r, unsigned
 	node->parent = mCurrentTimeGraph;
 	mCurrentTimeGraph->subGraph.push_back(node);
 	mCurrentTimeGraph = (*mCurrentTimeGraph->subGraph.rbegin());
-	timer->mNode = mCurrentTimeGraph;
+	timer->mNode[mMeasureTimerFrameId] = mCurrentTimeGraph;
 								// TO SOLVE: have static array of node 
 }
 
@@ -482,11 +482,13 @@ void DxGpuPerformance::endFrame()
 			if (!timer->mUsedThisFrame)	// we should test usePreviousFrame but that will be enough for now
 				continue;
 			ATLASSERT(timer->mEnded);	// the timer must have been ended this frame
-			ATLASSERT(timer->mNode);
 
-			while (context->GetData(timer->mBeginQueries[localReadTimerFrameId], &timer->mNode->mBeginTick, sizeof(timer->mNode->mBeginTick), 0) != S_OK);
-			while (context->GetData(timer->mEndQueries[localReadTimerFrameId], &timer->mNode->mEndTick, sizeof(timer->mNode->mBeginTick), 0) != S_OK);
-			while (context->GetData(timer->mDisjointQueries[localReadTimerFrameId], &timer->mNode->disjointData, sizeof(D3D11_QUERY_DATA_TIMESTAMP_DISJOINT), 0) != S_OK);
+			TimerGraphNode* node = timer->mNode[localReadTimerFrameId];
+			ATLASSERT(node);
+
+			while (context->GetData(timer->mBeginQueries[localReadTimerFrameId], &node->mBeginTick, sizeof(UINT64), 0) != S_OK);
+			while (context->GetData(timer->mEndQueries[localReadTimerFrameId], &node->mEndTick, sizeof(UINT64), 0) != S_OK);
+			while (context->GetData(timer->mDisjointQueries[localReadTimerFrameId], &node->disjointData, sizeof(D3D11_QUERY_DATA_TIMESTAMP_DISJOINT), 0) != S_OK);
 		}
 
 		// Get the begining of the frame measurement
@@ -496,7 +498,7 @@ void DxGpuPerformance::endFrame()
 			DxGpuPerformance::DxGpuTimer* timer = (*it).second;
 			if (!timer->mUsedThisFrame)	// we should test usePreviousFrame but that will be enough for now
 				continue;
-			minBeginTime = min(minBeginTime, timer->mNode->mBeginTick);
+			minBeginTime = min(minBeginTime, timer->mNode[localReadTimerFrameId]->mBeginTick);
 		}
 
 
@@ -514,16 +516,17 @@ void DxGpuPerformance::endFrame()
 			float beginMs = 0.0f;
 			float endMs = 0.0f;
 			float lastDurationMs = 0.0f;
-			if (timer->mNode->disjointData.Disjoint == FALSE)
+			TimerGraphNode* node = timer->mNode[localReadTimerFrameId];
+			if (node->disjointData.Disjoint == FALSE)
 			{
-				float factor = 1000.0f / float(timer->mNode->disjointData.Frequency);
-				beginMs = (timer->mNode->mBeginTick - minBeginTime) * factor;
-				endMs   = (timer->mNode->mEndTick - minBeginTime) * factor;
-				lastDurationMs = (timer->mNode->mEndTick - timer->mNode->mBeginTick) * factor;
+				float factor = 1000.0f / float(node->disjointData.Frequency);
+				beginMs = (node->mBeginTick - minBeginTime) * factor;
+				endMs   = (node->mEndTick - minBeginTime) * factor;
+				lastDurationMs = (node->mEndTick - node->mBeginTick) * factor;
 			}
-			timer->mNode->mBeginMs = beginMs;
-			timer->mNode->mEndMs = endMs;
-			timer->mNode->mLastDurationMs = lastDurationMs;
+			node->mBeginMs = beginMs;
+			node->mEndMs = endMs;
+			node->mLastDurationMs = lastDurationMs;
 		}
 	}
 

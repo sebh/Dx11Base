@@ -318,7 +318,7 @@ private:
 		ID3D11Query* mEndQueries[V_GPU_TIMER_FRAMECOUNT];
 
 		/// The graph node associated to this timer
-		TimerGraphNode* mNode = nullptr;// TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO this should also be using V_GPU_TIMER_FRAMECOUNT, right now the last read frame matches this behavior
+		TimerGraphNode* mNode[V_GPU_TIMER_FRAMECOUNT];
 
 		bool mUsedThisFrame = false;	///! should be checked before querying data in case it is not used in some frames (also we only support one timer per name)
 		bool mEnded = false;			///! sanity check to make sure a stared element is ended
