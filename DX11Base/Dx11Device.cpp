@@ -529,6 +529,17 @@ void DxGpuPerformance::endFrame()
 			node->mLastDurationMs = lastDurationMs;
 		}
 	}
+	else
+	{
+		// At least reset timers safety checks
+		DxGpuPerformance::GpuTimerMap::iterator it;
+		for (it = mTimers.begin(); it != mTimers.end(); it++)
+		{
+			DxGpuPerformance::DxGpuTimer* timer = (*it).second;
+			timer->mUsedThisFrame = false;
+			timer->mEnded = false;
+		}
+	}
 
 	// Move onto next frame
 	mReadTimerFrameId++;
