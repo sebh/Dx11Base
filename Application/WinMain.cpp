@@ -8,20 +8,6 @@
 #include "imgui\imgui_impl_dx11.h"
 
 
-LRESULT CALLBACK WindowProcess(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
-{
-	switch (message)
-	{
-	case WM_DESTROY:
-		PostQuitMessage(0);
-		return 0;
-		break;
-	}
-
-	// Handle any messages the switch statement didn't
-	return DefWindowProc(hWnd, message, wParam, lParam);
-}
-
 // the entry point for any Windows program
 int WINAPI WinMain(HINSTANCE hInstance,
 	HINSTANCE hPrevInstance,
@@ -43,7 +29,7 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	clientRect.top		= desiredPosY;
 
 	// Create the window
-	WindowHelper win(hInstance, clientRect, nCmdShow, &WindowProcess, L"D3D11 Application");
+	WindowHelper win(hInstance, clientRect, nCmdShow, L"D3D11 Application");
 	win.showWindow();
 
 	// Create the d3d device

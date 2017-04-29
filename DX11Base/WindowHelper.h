@@ -2,6 +2,7 @@
 
 #include <windows.h>
 #include <windowsx.h>
+#include "WindowInput.h"
 
 class WindowHelper
 {
@@ -10,7 +11,6 @@ public:
 		HINSTANCE hInstance, 
 		const RECT& clientRect, 
 		int nCmdShow,
-		WNDPROC winProcFun,
 		LPCWSTR windowName);
 	~WindowHelper();
 
@@ -28,6 +28,8 @@ private:
 	WNDCLASSEX		mWc;				/// This struct holds information for the window class
 	RECT			mClientRect;		/// The client rectangle where we render into
 	int				mNCmdShow;			/// Window show cmd
+
+	WindowInputData mInput;				/// input event and status (mouse, keyboard, etc.)
 };
 
 

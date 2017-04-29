@@ -25,5 +25,8 @@
     <ClInclude Include="Dx11Device.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="WindowInput.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -1,11 +1,29 @@
 
 #include "WindowHelper.h"
 
-WindowHelper::WindowHelper(HINSTANCE hInstance, const RECT& clientRect, int nCmdShow, WNDPROC winProcFun, LPCWSTR windowName)
+
+LRESULT CALLBACK WindowProcess(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+	switch (message)
+	{
+	case WM_DESTROY:
+		PostQuitMessage(0);
+		return 0;
+		break;
+	}
+
+	// Handle any messages the switch statement didn't
+	return DefWindowProc(hWnd, message, wParam, lParam);
+}
+
+
+WindowHelper::WindowHelper(HINSTANCE hInstance, const RECT& clientRect, int nCmdShow, LPCWSTR windowName)
 	: mHInstance(hInstance)
 	, mNCmdShow(nCmdShow)
 	, mClientRect(clientRect)
 {
+	mInput.init();
+
 	// And create the rectangle that will allow it
 	RECT rect = { 0, 0, clientRect.right - clientRect.left, clientRect.bottom - clientRect.top }; // set the size, but not the position otherwise does not seem to work
 	DWORD style = (WS_OVERLAPPED | WS_SYSMENU | WS_CAPTION | WS_MINIMIZEBOX | WS_MAXIMIZEBOX); // WS_OVERLAPPEDWINDOW, add simple style as paramter
@@ -24,7 +42,7 @@ WindowHelper::WindowHelper(HINSTANCE hInstance, const RECT& clientRect, int nCmd
 	// fill in the struct with the needed information
 	mWc.cbSize = sizeof(WNDCLASSEX);
 	mWc.style = CS_HREDRAW | CS_VREDRAW;
-	mWc.lpfnWndProc = winProcFun;
+	mWc.lpfnWndProc = WindowProcess;
 	mWc.hInstance = mHInstance;
 	mWc.hCursor = LoadCursor(NULL, IDC_ARROW);
 	mWc.hbrBackground = (HBRUSH)COLOR_WINDOW;
@@ -68,6 +86,24 @@ bool WindowHelper::processSingleMessage(MSG& msg)
 
 		// send the message to the WindowProc function
 		DispatchMessage(&msg);
+
+		/*switch (msg)
+		{
+		case WM_MOUSEMOVE:
+		case WM_LBUTTONDOWN:
+		case WM_RBUTTONDOWN:
+		case WM_MBUTTONDOWN:
+		case WM_LBUTTONUP:
+		case WM_RBUTTONUP:
+		case WM_MBUTTONUP:
+		case WM_LBUTTONDBLCLK:
+		case WM_RBUTTONDBLCLK:
+		case WM_MBUTTONDBLCLK:
+		case WM_NCMOUSELEAVE:
+		case WM_MOUSEWHEEL:
+		case WM_MOUSEHWHEEL:
+			break;
+		}*/
 
 		// Message processed
 		return true;
