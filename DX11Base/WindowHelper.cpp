@@ -95,26 +95,32 @@ void WindowHelper::processMouseMessage(MSG& msg)
 	case WM_LBUTTONDOWN:
 		event.type = etMouseButtonDown;
 		event.mouseButton = mbLeft;
+		mInput.mInputStatus.mouseButtons[event.mouseButton] = true;
 		break;
 	case WM_MBUTTONDOWN:
 		event.type = etMouseButtonDown;
 		event.mouseButton = mbMiddle;
+		mInput.mInputStatus.mouseButtons[event.mouseButton] = true;
 		break;
 	case WM_RBUTTONDOWN:
 		event.type = etMouseButtonDown;
 		event.mouseButton = mbRight;
+		mInput.mInputStatus.mouseButtons[event.mouseButton] = true;
 		break;
 	case WM_LBUTTONUP:
 		event.type = etMouseButtonUp;
 		event.mouseButton = mbLeft;
+		mInput.mInputStatus.mouseButtons[event.mouseButton] = false;
 		break;
 	case WM_MBUTTONUP:
 		event.type = etMouseButtonUp;
 		event.mouseButton = mbMiddle;
+		mInput.mInputStatus.mouseButtons[event.mouseButton] = false;
 		break;
 	case WM_RBUTTONUP:
 		event.type = etMouseButtonUp;
 		event.mouseButton = mbRight;
+		mInput.mInputStatus.mouseButtons[event.mouseButton] = false;
 		break;
 	case WM_LBUTTONDBLCLK:
 		event.type = etMouseButtonDoubleClick;
@@ -136,9 +142,119 @@ void WindowHelper::processMouseMessage(MSG& msg)
 	mInput.mInputEvents.push_back(event);
 }
 
+InputKey translateKey(MSG& msg)
+{
+	switch (msg.wParam)
+	{
+	case VK_RIGHT: 					return kRight;
+	case VK_LEFT: 					return kLeft;
+	case VK_DOWN: 					return kDown;
+	case VK_UP:						return kUp;
+	case VK_SPACE:					return kSpace;
+	case VK_NUMPAD0:				return kNumpad0;
+	case VK_NUMPAD1:				return kNumpad1;
+	case VK_NUMPAD2:				return kNumpad2;
+	case VK_NUMPAD3:				return kNumpad3;
+	case VK_NUMPAD4:				return kNumpad4;
+	case VK_NUMPAD5:				return kNumpad5;
+	case VK_NUMPAD6:				return kNumpad6;
+	case VK_NUMPAD7:				return kNumpad7;
+	case VK_NUMPAD8:				return kNumpad8;
+	case VK_NUMPAD9:				return kNumpad9;
+	case VK_MULTIPLY:				return kMultiply;
+	case VK_ADD:					return kAdd;
+	case VK_SEPARATOR:				return kSeparator;
+	case VK_SUBTRACT:				return kSubtract;
+	case VK_DECIMAL:				return kDecimal;
+	case VK_DIVIDE:					return kDivide;
+	case VK_F1:						return kF1;
+	case VK_F2:						return kF2;
+	case VK_F3:						return kF3;
+	case VK_F4:						return kF4;
+	case VK_F5:						return kF5;
+	case VK_F6:						return kF6;
+	case VK_F7:						return kF7;
+	case VK_F8:						return kF8;
+	case VK_F9:						return kF9;
+	case VK_F10:					return kF10;
+	case VK_F11:					return kF11;
+	case VK_F12:					return kF12;
+	case VK_LSHIFT:					return kLshift;
+	case VK_RSHIFT:					return kRshift;
+	case VK_LCONTROL:				return kLcontrol;
+	case VK_RCONTROL:				return kRcontrol;
+
+	case '0': 						return k0;
+	case '1': 						return k1;
+	case '2': 						return k2;
+	case '3': 						return k3;
+	case '4': 						return k4;
+	case '5': 						return k5;
+	case '6': 						return k6;
+	case '7': 						return k7;
+	case '8': 						return k8;
+	case '9': 						return k9;
+	case 'A': 						return kA;
+	case 'B': 						return kB;
+	case 'C': 						return kC;
+	case 'D': 						return kD;
+	case 'E': 						return kE;
+	case 'F': 						return kF;
+	case 'G': 						return kG;
+	case 'H': 						return kH;
+	case 'I': 						return kI;
+	case 'J': 						return kJ;
+	case 'K': 						return kK;
+	case 'L': 						return kL;
+	case 'M': 						return kM;
+	case 'N': 						return kN;
+	case 'O': 						return kO;
+	case 'P': 						return kP;
+	case 'Q': 						return kQ;
+	case 'R': 						return kR;
+	case 'S': 						return kS;
+	case 'T': 						return kT;
+	case 'U': 						return kU;
+	case 'V': 						return kV;
+	case 'W': 						return kW;
+	case 'X': 						return kX;
+	case 'Y': 						return kY;
+	case 'Z':						return kZ;
+
+// TODO VK_GAMEPAD
+
+	default:
+		return kUnknown;
+	}
+}
 
 void WindowHelper::processKeyMessage(MSG& msg)
 {
+	InputEvent event;
+	event.mouseX = mInput.mInputStatus.mouseX;
+	event.mouseY = mInput.mInputStatus.mouseY;
+
+	event.key = translateKey(msg);
+	if (event.key == kUnknown)
+		return;	// unkown key so do not register the event.
+
+	switch (msg.message)
+	{
+	case WM_KEYDOWN:
+		event.type = etKeyDown;
+		mInput.mInputStatus.keys[event.key] = true;
+		break;
+	case WM_KEYUP:
+		event.type = etKeyUp;
+		mInput.mInputStatus.keys[event.key] = false;
+		break;
+
+	case WM_SYSCHAR:
+	case WM_CHAR:
+		event.type = etKeyChar;
+		break;
+	}
+	mInput.mInputEvents.push_back(event);
 }
 
 
@@ -168,6 +284,13 @@ bool WindowHelper::processSingleMessage(MSG& msg)
 		case WM_MOUSEWHEEL:
 		case WM_MOUSEHWHEEL:
 			processMouseMessage(msg);
+			break;
+
+		case WM_KEYDOWN:
+		case WM_KEYUP:
+		case WM_CHAR:
+		case WM_SYSCHAR:
+			processKeyMessage(msg);
 			break;
 		}
 

@@ -8,7 +8,79 @@ enum InputKey
 	kRight,
 	kUp,
 	kDown,
-	kCount
+	kSpace,
+	kNumpad0,
+	kNumpad1,
+	kNumpad2,
+	kNumpad3,
+	kNumpad4,
+	kNumpad5,
+	kNumpad6,
+	kNumpad7,
+	kNumpad8,
+	kNumpad9,
+	kMultiply,
+	kAdd,
+	kSeparator,
+	kSubtract,
+	kDecimal,
+	kDivide,
+	kF1,
+	kF2,
+	kF3,
+	kF4,
+	kF5,
+	kF6,
+	kF7,
+	kF8,
+	kF9,
+	kF10,
+	kF11,
+	kF12,
+	kLshift,
+	kRshift,
+	kLcontrol,
+	kRcontrol,
+
+	k0,
+	k1,
+	k2,
+	k3,
+	k4,
+	k5,
+	k6,
+	k7,
+	k8,
+	k9,
+	kA,
+	kB,
+	kC,
+	kD,
+	kE,
+	kF,
+	kG,
+	kH,
+	kI,
+	kJ,
+	kK,
+	kL,
+	kM,
+	kN,
+	kO,
+	kP,
+	kQ,
+	kR,
+	kS,
+	kT,
+	kU,
+	kV,
+	kW,
+	kX,
+	kY,
+	kZ,
+
+	kCount,
+	kUnknown
 };
 enum InputMouseButton
 {
@@ -21,6 +93,7 @@ enum InputEventType
 {
 	etKeyUp,
 	etKeyDown,
+	etKeyChar,
 	etMouseMoved,
 	etMouseButtonUp,
 	etMouseButtonDown,
@@ -59,8 +132,8 @@ typedef std::vector<InputEvent> WindowInputEventList;
 
 struct WindowInputData
 {
-	WindowInputStatus mInputStatus;		/// 
-	WindowInputEventList mInputEvents;	/// 
+	WindowInputStatus mInputStatus;		/// status after all events in mInputEvents
+	WindowInputEventList mInputEvents;	/// every events that occured ince last update
 
 	void init()
 	{
