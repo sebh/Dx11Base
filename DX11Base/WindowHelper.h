@@ -18,6 +18,10 @@ public:
 
 	bool processSingleMessage(MSG& msg);
 
+	const WindowInputData& getInputData()
+	{
+		return mInput;
+	}
 	void clearInputEvents()
 	{
 		mInput.mInputEvents.clear();

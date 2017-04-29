@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Dx11Base/WindowInput.h"
 
 class Game
 {
@@ -10,7 +11,7 @@ public:
 	void initialise();
 	void shutdown();
 
-	void update();
+	void update(const WindowInputData& inputData);
 	void render();
 
 private:

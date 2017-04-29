@@ -78,7 +78,7 @@ int WINAPI WinMain(HINSTANCE hInstance,
 			ImGui_ImplDX11_NewFrame();
 
 			// Game update
-			game.update();
+			game.update(win.getInputData());
 
 			// Game render
 			game.render();
