@@ -77,6 +77,71 @@ void WindowHelper::showWindow()
 }
 
 
+void WindowHelper::processMouseMessage(MSG& msg)
+{
+	// TODO WM_NCMOUSELEAVE 
+
+	mInput.mInputStatus.mouseX = LOWORD(msg.lParam);
+	mInput.mInputStatus.mouseY = HIWORD(msg.lParam);
+
+	InputEvent event;
+	event.mouseX = mInput.mInputStatus.mouseX;
+	event.mouseY = mInput.mInputStatus.mouseY;
+	switch (msg.message)
+	{
+	case WM_MOUSEMOVE:
+		event.type = etMouseMoved;
+		break;
+	case WM_LBUTTONDOWN:
+		event.type = etMouseButtonDown;
+		event.mouseButton = mbLeft;
+		break;
+	case WM_MBUTTONDOWN:
+		event.type = etMouseButtonDown;
+		event.mouseButton = mbMiddle;
+		break;
+	case WM_RBUTTONDOWN:
+		event.type = etMouseButtonDown;
+		event.mouseButton = mbRight;
+		break;
+	case WM_LBUTTONUP:
+		event.type = etMouseButtonUp;
+		event.mouseButton = mbLeft;
+		break;
+	case WM_MBUTTONUP:
+		event.type = etMouseButtonUp;
+		event.mouseButton = mbMiddle;
+		break;
+	case WM_RBUTTONUP:
+		event.type = etMouseButtonUp;
+		event.mouseButton = mbRight;
+		break;
+	case WM_LBUTTONDBLCLK:
+		event.type = etMouseButtonDoubleClick;
+		event.mouseButton = mbLeft;
+		break;
+	case WM_MBUTTONDBLCLK:
+		event.type = etMouseButtonDoubleClick;
+		event.mouseButton = mbMiddle;
+		break;
+	case WM_RBUTTONDBLCLK:
+		event.type = etMouseButtonDoubleClick;
+		event.mouseButton = mbRight;
+		break;
+
+	// TODO
+	//case WM_MOUSEWHEEL:
+	//case WM_MOUSEHWHEEL:
+	}
+	mInput.mInputEvents.push_back(event);
+}
+
+
+void WindowHelper::processKeyMessage(MSG& msg)
+{
+}
+
+
 bool WindowHelper::processSingleMessage(MSG& msg)
 {
 	if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
@@ -87,7 +152,7 @@ bool WindowHelper::processSingleMessage(MSG& msg)
 		// send the message to the WindowProc function
 		DispatchMessage(&msg);
 
-		/*switch (msg)
+		switch (msg.message)
 		{
 		case WM_MOUSEMOVE:
 		case WM_LBUTTONDOWN:
@@ -102,8 +167,9 @@ bool WindowHelper::processSingleMessage(MSG& msg)
 		case WM_NCMOUSELEAVE:
 		case WM_MOUSEWHEEL:
 		case WM_MOUSEHWHEEL:
+			processMouseMessage(msg);
 			break;
-		}*/
+		}
 
 		// Message processed
 		return true;

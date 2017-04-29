@@ -202,6 +202,9 @@ int WINAPI WinMain(HINSTANCE hInstance,
 			g_dx11Device->swap(sVSyncEnable);
 			DxGpuPerformance::endGpuTimer(frameGpuTimerName);
 			DxGpuPerformance::endFrame();
+
+			// Events have all been processed in this path by the game
+			win.clearInputEvents();
 		}
 	}
 

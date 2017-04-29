@@ -18,10 +18,18 @@ public:
 
 	bool processSingleMessage(MSG& msg);
 
+	void clearInputEvents()
+	{
+		mInput.mInputEvents.clear();
+	}
+
 	const HWND getHwnd() { return mHWnd; }
 
 private:
 	WindowHelper();
+
+	void processMouseMessage(MSG& msg);
+	void processKeyMessage(MSG& msg);
 
 	HINSTANCE		mHInstance;			/// The application instance
 	HWND			mHWnd;				/// The handle for the window, filled by a function

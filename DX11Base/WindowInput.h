@@ -2,46 +2,51 @@
 
 #include <vector>
 
-struct WindowInputStatus
+enum InputKey
 {
-	enum Key
-	{
-		kLeft,
-		kRight,
-		kUp,
-		kDown,
-		kCount
-	};
-	enum MouseButton
-	{
-		mbLeft,
-		mbMiddle,
-		mbRight,
-		mbCount
-	};
+	kLeft,
+	kRight,
+	kUp,
+	kDown,
+	kCount
+};
+enum InputMouseButton
+{
+	mbLeft,
+	mbMiddle,
+	mbRight,
+	mbCount
+};
+enum InputEventType
+{
+	etKeyUp,
+	etKeyDown,
+	etMouseMoved,
+	etMouseButtonUp,
+	etMouseButtonDown,
+	etMouseButtonDoubleClick,
+	etCount
+};
 
-	bool keys[Key::kCount];
-	bool mouseButtons[MouseButton::mbCount];
+struct InputEvent
+{
+	InputEventType type;
+	union 
+	{
+		InputKey key;
+		InputMouseButton mouseButton;
+	};
 	int  mouseX;
 	int  mouseY;
+};
 
-	enum EventType
-	{
-		etKeyUp,
-		etKeyDown,
-		etMouseButtonUp,
-		etMouseButtonDown,
-		etMouseButtonDoubleClick,
-		etCount
-	};
-	struct Event
-	{
-		EventType type;
-		Key key;
-		MouseButton mouseButton;
-		int  mouseX;
-		int  mouseY;
-	};
+struct WindowInputStatus
+{
+
+	bool keys[kCount];
+	bool mouseButtons[mbCount];
+	int  mouseX;
+	int  mouseY;
 
 	void init()
 	{
@@ -50,7 +55,7 @@ struct WindowInputStatus
 
 };
 
-typedef std::vector<WindowInputStatus::Event> WindowInputEventList;
+typedef std::vector<InputEvent> WindowInputEventList;
 
 struct WindowInputData
 {
