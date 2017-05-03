@@ -140,12 +140,78 @@ public:
 	static void initBufferDesc_uav(D3D11_BUFFER_DESC& desc, UINT byteSize);
 
 public:///////////////////////////////////protected:
-	D3D11_BUFFER_DESC mBufferDesc;
+	D3D11_BUFFER_DESC mDesc;
 	ID3D11Buffer* mBuffer;
 
 private:
 	RenderBuffer();
 	RenderBuffer(RenderBuffer&);
+};
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+class Texture2D
+{
+public:
+	Texture2D(D3D11_TEXTURE2D_DESC& desc);
+	virtual ~Texture2D();
+	static void initDepthStencilBuffer(D3D11_TEXTURE2D_DESC& desc, UINT width, UINT height, bool uav);
+	static void initDefault(D3D11_TEXTURE2D_DESC& desc, DXGI_FORMAT format, UINT width, UINT height, bool renderTarget, bool uav);
+	D3D11_TEXTURE2D_DESC mDesc;
+	ID3D11Texture2D* mTexture = nullptr;
+	ID3D11DepthStencilView* mDepthStencilView = nullptr;
+	ID3D11RenderTargetView* mRenderTargetView = nullptr;
+	ID3D11ShaderResourceView* mShaderResourceView = nullptr;
+	ID3D11UnorderedAccessView* mUnorderedAccessView = nullptr;
+private:
+	Texture2D();
+	Texture2D(Texture2D&);
+};
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+class DepthStencilState
+{
+public:
+	DepthStencilState(D3D11_DEPTH_STENCIL_DESC& desc);
+	virtual ~DepthStencilState();
+	static void initDefaultDepthOnStencilOff(D3D11_DEPTH_STENCIL_DESC& desc);
+	ID3D11DepthStencilState* mState;
+private:
+	DepthStencilState();
+	DepthStencilState(DepthStencilState&);
+};
+
+class RasterizerState
+{
+public:
+	RasterizerState(D3D11_RASTERIZER_DESC& desc);
+	virtual ~RasterizerState();
+	static void initDefaultState(D3D11_RASTERIZER_DESC& desc);
+	ID3D11RasterizerState* mState;
+private:
+	RasterizerState();
+	RasterizerState(RasterizerState&);
+};
+
+class BlendState
+{
+public:
+	BlendState(D3D11_BLEND_DESC & desc);
+	virtual ~BlendState();
+	static void initDisabledState(D3D11_BLEND_DESC & desc);
+	static void initAdditiveState(D3D11_BLEND_DESC & desc);
+	ID3D11BlendState* mState;
+private:
+	BlendState();
+	BlendState(BlendState&);
 };
 
 

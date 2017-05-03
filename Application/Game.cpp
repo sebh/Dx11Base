@@ -2,6 +2,12 @@
 #include "Game.h"
 #include "Dx11Base/Dx11Device.h"
 
+#include "windows.h"
+#include "DirectXMath.h"
+
+#include <imgui.h>
+
+
 // hack for testing
 RenderBuffer* vertexBuffer;
 RenderBuffer* indexBuffer;
@@ -127,13 +133,26 @@ void Game::shutdown()
 	// TODO
 }
 
-void Game::update()
+void Game::update(const WindowInputData& inputData)
 {
+	for (auto& event : inputData.mInputEvents)
+	{
+		// Process events
+	}
+}
+
+
+void costTest(int loop)
+{
+	ID3D11DeviceContext* context = g_dx11Device->getDeviceContext();
+	context->PSSetShader(pixelShaderFinal->mPixelShader, NULL, 0);
+	for(int i=0; i<loop; ++i)
+		context->DrawIndexed(3, 0, 0);
 }
 
 void Game::render()
 {
-	GPU_SCOPED_TIMEREVENT(GameRender);
+	GPU_SCOPED_TIMEREVENT(GameRender, 75, 75, 75);
 
 	ID3D11DeviceContext* context = g_dx11Device->getDeviceContext();
 	ID3D11RenderTargetView* backBuffer = g_dx11Device->getBackBufferRT();
@@ -152,7 +171,7 @@ void Game::render()
 	}
 
 	{
-		GPU_SCOPED_TIMER(GameRenderClear);
+		GPU_SCOPED_TIMER(Clear, 34, 177, 76);
 
 		// Clear the back buffer
 		D3DCOLORVALUE clearColor = { 0.1f, 0.2f, 0.4f, 1.0f };
@@ -163,7 +182,7 @@ void Game::render()
 	}
 
 	{
-		GPU_SCOPED_TIMER(GameRenderIterate);
+		GPU_SCOPED_TIMER(Iterate, 34, 177, 76);
 
 		// Set vertex buffer stride and offset.
 		unsigned int stride = sizeof(VertexType);
@@ -180,30 +199,126 @@ void Game::render()
 
 		// Clear
 		context->PSSetShader(pixelShaderClear->mPixelShader, NULL, 0);
-		context->DrawIndexed(/*indexCount*/3, 0, 0);
+		context->DrawIndexed(3, 0, 0);
 
 		//ScopedGpuTimer
 
 		// Accum
 		context->PSSetShader(pixelShader->mPixelShader, NULL, 0);
-		context->DrawIndexed(/*indexCount*/12, 0, 0);
-		context->DrawIndexed(/*indexCount*/12, 0, 0);
-		context->DrawIndexed(/*indexCount*/12, 0, 0);
-		context->DrawIndexed(/*indexCount*/12, 0, 0);
-		context->DrawIndexed(/*indexCount*/12, 0, 0);
-		context->DrawIndexed(/*indexCount*/12, 0, 0);
-		context->DrawIndexed(/*indexCount*/12, 0, 0);
-		context->DrawIndexed(/*indexCount*/12, 0, 0);
-		context->DrawIndexed(/*indexCount*/12, 0, 0);
-		context->DrawIndexed(/*indexCount*/12, 0, 0);
+		context->DrawIndexed(12, 0, 0);
 	}
 
 	{
-		GPU_SCOPED_TIMER(GameRenderFinalPass);
+		GPU_SCOPED_TIMER(FinalPass, 34, 177, 76);
 
 		// Final view
 		context->PSSetShader(pixelShaderFinal->mPixelShader, NULL, 0);
-		context->DrawIndexed(/*indexCount*/3, 0, 0);
+		context->DrawIndexed(3, 0, 0);
+	}
+
+	{
+		GPU_SCOPED_TIMER(Shadow, 128, 128, 255);
+		{
+			GPU_SCOPED_TIMER(ShadowCasc0, 64, 64, 255);
+			{
+				GPU_SCOPED_TIMER(Shadow0, 64, 0, 255);
+				costTest(4);
+			}
+			{
+				GPU_SCOPED_TIMER(PartShad0, 0, 64, 255);
+				costTest(2);
+			}
+		}
+		{
+			GPU_SCOPED_TIMER(ShadowCasc1, 64, 64, 255);
+			{
+				GPU_SCOPED_TIMER(Shadow1, 64, 0, 255);
+				costTest(5);
+			}
+			{
+				GPU_SCOPED_TIMER(PartShad1, 0, 64, 255);
+				costTest(2);
+			}
+		}
+		{
+			GPU_SCOPED_TIMER(ShadowCasc2, 64, 64, 255);
+			{
+				GPU_SCOPED_TIMER(Shadow2, 64, 0, 255);
+				costTest(6);
+			}
+			{
+				GPU_SCOPED_TIMER(PartShad2, 0, 64, 255);
+				costTest(1);
+			}
+		}
+		{
+			GPU_SCOPED_TIMER(ShadowCasc3, 64, 64, 255);
+			{
+				GPU_SCOPED_TIMER(Shadow3, 64, 0, 255);
+				costTest(7);
+			}
+			{
+				GPU_SCOPED_TIMER(PartShad3, 0, 64, 255);
+				costTest(1);
+			}
+		}
+	}
+
+	{
+		GPU_SCOPED_TIMER(GBuffer, 255, 128, 128);
+		{
+			{
+				GPU_SCOPED_TIMER(GbClear, 255, 64, 0);
+				costTest(1);
+			}
+			{
+				GPU_SCOPED_TIMER(GbRender, 255, 0, 64);
+				costTest(15);
+			}
+		}
+	}
+	{
+		GPU_SCOPED_TIMER(Volumetric, 100, 200, 100);
+		{
+			{
+				GPU_SCOPED_TIMER(MaterialVoxelisation, 50, 200, 50);
+				costTest(10);
+			}
+			{
+				GPU_SCOPED_TIMER(LuminanceVoxelisation, 50, 200, 0);
+				costTest(15);
+			}
+			{
+				GPU_SCOPED_TIMER(FroxelIntegration, 0, 200, 50);
+				costTest(7);
+			}
+		}
+	}
+	{
+		GPU_SCOPED_TIMER(Lighting, 240, 201, 14);
+		{
+			{
+				GPU_SCOPED_TIMER(TiledLighting, 128, 100, 7);
+				costTest(12);
+			}
+			{
+				GPU_SCOPED_TIMER(SkyAndMedia, 64, 50, 4);
+				costTest(6);
+			}
+		}
+	}
+	{
+		GPU_SCOPED_TIMER(Post, 200, 200, 0);
+		{
+			{
+				GPU_SCOPED_TIMER(TAA, 128, 128, 0);
+				costTest(2);
+			}
+			{
+				GPU_SCOPED_TIMER(Tone, 64, 64, 0);
+				costTest(2);
+			}
+		}
 	}
 }
 
