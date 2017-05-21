@@ -76,6 +76,7 @@ void Dx11Device::internalInitialise(const HWND& hWnd)
 	ATLASSERT(hr == S_OK);
 
 #if DX_DEBUG_EVENT
+	// Could do more https://blogs.msdn.microsoft.com/chuckw/2012/11/30/direct3d-sdk-debug-layer-tricks/
 	hr = mDevcon->QueryInterface(__uuidof(mUserDefinedAnnotation), reinterpret_cast<void**>(&mUserDefinedAnnotation));
 	ATLASSERT( hr == S_OK );
 #endif // DX_DEBUG_EVENT
@@ -212,6 +213,75 @@ void RenderBuffer::initBufferDesc_uav(D3D11_BUFFER_DESC& desc, UINT byteSize)
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+DXGI_FORMAT getDepthStencilViewFormatFromTypeless(DXGI_FORMAT format)
+{
+	switch (format)
+	{
+	case DXGI_FORMAT_R16_TYPELESS:
+		return DXGI_FORMAT_D16_UNORM;
+		break;
+	case DXGI_FORMAT_R24G8_TYPELESS:
+		return  DXGI_FORMAT_D24_UNORM_S8_UINT;
+		break;
+	case DXGI_FORMAT_R32_TYPELESS:
+		return  DXGI_FORMAT_D32_FLOAT;
+		break;
+	}
+	ATLASSERT(false); // unknown format
+	return DXGI_FORMAT_UNKNOWN;
+}
+DXGI_FORMAT getDepthShaderResourceFormatFromTypeless(DXGI_FORMAT format)
+{
+	switch (format)
+	{
+	case DXGI_FORMAT_R16_TYPELESS:
+		return DXGI_FORMAT_R16_UNORM;
+		break;
+	case DXGI_FORMAT_R24G8_TYPELESS:
+		return  DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+		break;
+	case DXGI_FORMAT_R32_TYPELESS:
+		return  DXGI_FORMAT_D32_FLOAT;
+		break;
+	}
+	ATLASSERT(false); // unknown format
+	return DXGI_FORMAT_UNKNOWN;
+}
+
+bool isFormatTypeless(DXGI_FORMAT format)
+{
+	switch (format)
+	{
+	case DXGI_FORMAT_R32G32B32A32_TYPELESS:
+	case DXGI_FORMAT_R32G32B32_TYPELESS:
+	case DXGI_FORMAT_R16G16B16A16_TYPELESS:
+	case DXGI_FORMAT_R32G32_TYPELESS:
+	case DXGI_FORMAT_R32G8X24_TYPELESS:
+	case DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS:
+	case DXGI_FORMAT_X32_TYPELESS_G8X24_UINT:
+	case DXGI_FORMAT_R10G10B10A2_TYPELESS:
+	case DXGI_FORMAT_R8G8B8A8_TYPELESS:
+	case DXGI_FORMAT_R16G16_TYPELESS:
+	case DXGI_FORMAT_R32_TYPELESS:
+	case DXGI_FORMAT_R24G8_TYPELESS:
+	//case DXGI_FORMAT_R24_UNORM_X8_TYPELESS:
+	//case DXGI_FORMAT_X24_TYPELESS_G8_UINT:
+	case DXGI_FORMAT_R8G8_TYPELESS:
+	case DXGI_FORMAT_R16_TYPELESS:
+	case DXGI_FORMAT_R8_TYPELESS:
+	case DXGI_FORMAT_BC1_TYPELESS:
+	case DXGI_FORMAT_BC2_TYPELESS:
+	case DXGI_FORMAT_BC3_TYPELESS:
+	case DXGI_FORMAT_BC4_TYPELESS:
+	case DXGI_FORMAT_BC5_TYPELESS:
+	case DXGI_FORMAT_B8G8R8A8_TYPELESS:
+	case DXGI_FORMAT_B8G8R8X8_TYPELESS:
+	case DXGI_FORMAT_BC6H_TYPELESS:
+	case DXGI_FORMAT_BC7_TYPELESS:
+		return true;
+	}
+	return false;
+}
 
 Texture2D::Texture2D(D3D11_TEXTURE2D_DESC& desc) :
 	mDesc(desc)
@@ -220,27 +290,37 @@ Texture2D::Texture2D(D3D11_TEXTURE2D_DESC& desc) :
 	HRESULT hr = device->CreateTexture2D(&mDesc, nullptr, &mTexture);
 	ATLASSERT(hr == S_OK);
 
+	DXGI_FORMAT format = desc.Format;
 	if (mDesc.BindFlags & D3D11_BIND_DEPTH_STENCIL)
 	{
 		CD3D11_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc(D3D11_DSV_DIMENSION_TEXTURE2D);
+		depthStencilViewDesc.Format = getDepthStencilViewFormatFromTypeless(format);
 		HRESULT hr = device->CreateDepthStencilView(mTexture, &depthStencilViewDesc, &mDepthStencilView);
 		ATLASSERT(hr == S_OK);
+
+		format = getDepthShaderResourceFormatFromTypeless(format);
 	}
+
+	ATLASSERT(!isFormatTypeless(format));
+
 	if (mDesc.BindFlags & D3D11_BIND_SHADER_RESOURCE)
 	{
 		CD3D11_SHADER_RESOURCE_VIEW_DESC shaderResourceViewDesc(D3D11_SRV_DIMENSION_TEXTURE2D);
+		shaderResourceViewDesc.Format = format;
 		HRESULT hr = device->CreateShaderResourceView(mTexture, &shaderResourceViewDesc, &mShaderResourceView);
 		ATLASSERT(hr == S_OK);
 	}
 	if (mDesc.BindFlags & D3D11_BIND_UNORDERED_ACCESS)
 	{
 		CD3D11_UNORDERED_ACCESS_VIEW_DESC unorderedAccessViewDesc(D3D11_UAV_DIMENSION_TEXTURE2D);
+		unorderedAccessViewDesc.Format = format;
 		HRESULT hr = device->CreateUnorderedAccessView(mTexture, &unorderedAccessViewDesc, &mUnorderedAccessView);
 		ATLASSERT(hr == S_OK);
 	}
 	if (mDesc.BindFlags & D3D11_BIND_RENDER_TARGET)
 	{
 		CD3D11_RENDER_TARGET_VIEW_DESC renderTargetViewDesc(D3D11_RTV_DIMENSION_TEXTURE2D);
+		renderTargetViewDesc.Format = format;
 		HRESULT hr = device->CreateRenderTargetView(mTexture, &renderTargetViewDesc, &mRenderTargetView);
 		ATLASSERT(hr == S_OK);
 	}
@@ -276,11 +356,11 @@ void Texture2D::initDepthStencilBuffer(D3D11_TEXTURE2D_DESC& desc, UINT width, U
 	desc.Height = height;
 	desc.MipLevels = 1;
 	desc.ArraySize = 1;
-	desc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	desc.Format = DXGI_FORMAT_R24G8_TYPELESS; // DXGI_FORMAT_D24_UNORM_S8_UINT;
 	desc.SampleDesc.Count = 1;
 	desc.SampleDesc.Quality = 0;
 	desc.Usage = D3D11_USAGE_DEFAULT;
-	desc.BindFlags = D3D11_BIND_DEPTH_STENCIL | (uav ? D3D11_BIND_UNORDERED_ACCESS : 0);	// cannot be D3D11_BIND_SHADER_RESOURCE
+	desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_DEPTH_STENCIL | (uav ? D3D11_BIND_UNORDERED_ACCESS : 0);	// cannot be D3D11_BIND_SHADER_RESOURCE
 	desc.CPUAccessFlags = 0;
 	desc.MiscFlags = 0;
 }
@@ -298,6 +378,46 @@ void Texture2D::initDefault(D3D11_TEXTURE2D_DESC& desc, DXGI_FORMAT format, UINT
 	desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | (renderTarget ? D3D11_BIND_RENDER_TARGET : 0) | (uav ? D3D11_BIND_UNORDERED_ACCESS : 0);
 	desc.CPUAccessFlags = 0;
 	desc.MiscFlags = 0;
+}
+
+
+
+SamplerState::SamplerState(D3D11_SAMPLER_DESC& desc)
+{
+	ID3D11Device* device = g_dx11Device->getDevice();
+	HRESULT hr = device->CreateSamplerState(&desc, &mSampler);
+	ATLASSERT(hr == S_OK);
+}
+SamplerState::~SamplerState()
+{
+	mSampler->Release();
+	mSampler = 0;
+}
+void SamplerState::initLinearClamp(D3D11_SAMPLER_DESC& desc)
+{
+	desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+	desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+	desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+	desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+	desc.MipLODBias = 0.0f;
+	desc.MaxAnisotropy = 1;
+	desc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+	desc.BorderColor[0] = desc.BorderColor[1] = desc.BorderColor[2] = desc.BorderColor[3] = 1.0f;
+	desc.MinLOD = -FLT_MAX;
+	desc.MaxLOD = FLT_MAX;
+}
+void SamplerState::initShadowCmpClamp(D3D11_SAMPLER_DESC& desc)
+{
+	desc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
+	desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+	desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+	desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+	desc.MipLODBias = 0.0f;
+	desc.MaxAnisotropy = 1;
+	desc.ComparisonFunc = D3D11_COMPARISON_LESS;
+	desc.BorderColor[0] = desc.BorderColor[1] = desc.BorderColor[2] = desc.BorderColor[3] = 1.0f;
+	desc.MinLOD = -FLT_MAX;
+	desc.MaxLOD = FLT_MAX;
 }
 
 
@@ -439,15 +559,15 @@ ShaderBase::ShaderBase(const TCHAR* filename, const char* entryFunction, const c
 	const UINT defaultFlags = 0;
 
 	HRESULT hr = D3DCompileFromFile(
-		filename,		// filename
-		NULL,			// defines
-		NULL,			// include
-		entryFunction,	// function name
-		profile,		// target profile
-		defaultFlags,	// flag1
-		defaultFlags,	// flag2
-		&mShaderBuffer, // ouput
-		&errorbuffer);	// errors
+		filename,							// filename
+		NULL,								// defines
+		D3D_COMPILE_STANDARD_FILE_INCLUDE,	// default include handler (includes relative to the compiled file)
+		entryFunction,						// function name
+		profile,							// target profile
+		defaultFlags,						// flag1
+		defaultFlags,						// flag2
+		&mShaderBuffer,						// ouput
+		&errorbuffer);						// errors
 
 	if (FAILED(hr))
 	{

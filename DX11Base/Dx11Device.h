@@ -37,6 +37,17 @@ public:
 
 	void swap(bool vsyncEnabled);
 
+	static void setNullRenderTarget(ID3D11DeviceContext* devcon)
+	{
+		ID3D11RenderTargetView* nullRTV = nullptr;
+		devcon->OMSetRenderTargets(1, &nullRTV, nullptr);
+	}
+	static void setNullPsResources(ID3D11DeviceContext* devcon)
+	{
+		static ID3D11ShaderResourceView* null[8] = { nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };	// not good
+		devcon->PSSetShaderResources(0, 8, null);
+	}
+
 private:
 	Dx11Device();
 	Dx11Device(Dx11Device&);
@@ -171,6 +182,20 @@ private:
 	Texture2D();
 	Texture2D(Texture2D&);
 };
+
+class SamplerState
+{
+public:
+	SamplerState(D3D11_SAMPLER_DESC& desc);
+	virtual ~SamplerState();
+	static void initLinearClamp(D3D11_SAMPLER_DESC& desc);
+	static void initShadowCmpClamp(D3D11_SAMPLER_DESC& desc);
+	ID3D11SamplerState* mSampler = nullptr;
+private:
+	SamplerState();
+	SamplerState(SamplerState&);
+};
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////
