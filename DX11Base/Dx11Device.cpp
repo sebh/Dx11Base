@@ -382,6 +382,95 @@ void Texture2D::initDefault(D3D11_TEXTURE2D_DESC& desc, DXGI_FORMAT format, UINT
 
 
 
+
+
+Texture3D::Texture3D(D3D11_TEXTURE3D_DESC& desc) :
+	mDesc(desc)
+{
+	ID3D11Device* device = g_dx11Device->getDevice();
+	HRESULT hr = device->CreateTexture3D(&mDesc, nullptr, &mTexture);
+	ATLASSERT(hr == S_OK);
+	
+	if (mDesc.BindFlags & D3D11_BIND_SHADER_RESOURCE)
+	{
+		CD3D11_SHADER_RESOURCE_VIEW_DESC shaderResourceViewDesc(D3D11_SRV_DIMENSION_TEXTURE3D);
+		shaderResourceViewDesc.Format = desc.Format;
+		HRESULT hr = device->CreateShaderResourceView(mTexture, &shaderResourceViewDesc, &mShaderResourceView);
+		ATLASSERT(hr == S_OK);
+		if (desc.MipLevels > 1)
+		{
+			for (int l = 0; l < desc.MipLevels; ++l)
+			{
+				shaderResourceViewDesc.Texture3D.MostDetailedMip = l;
+				shaderResourceViewDesc.Texture3D.MipLevels = 1;
+
+				ID3D11ShaderResourceView* mipShaderResourceView;
+				hr = device->CreateShaderResourceView(mTexture, &shaderResourceViewDesc, &mipShaderResourceView);
+				ATLASSERT(hr == S_OK);
+				mShaderResourceViewMips.push_back(mipShaderResourceView);
+			}
+		}
+	}
+	if (mDesc.BindFlags & D3D11_BIND_UNORDERED_ACCESS)
+	{
+		CD3D11_UNORDERED_ACCESS_VIEW_DESC unorderedAccessViewDesc(D3D11_UAV_DIMENSION_TEXTURE3D);
+		unorderedAccessViewDesc.Format = desc.Format;
+		HRESULT hr = device->CreateUnorderedAccessView(mTexture, &unorderedAccessViewDesc, &mUnorderedAccessView);
+		ATLASSERT(hr == S_OK);
+		if (desc.MipLevels > 1)
+		{
+			for (int l = 0; l < desc.MipLevels; ++l)
+			{
+				unorderedAccessViewDesc.Texture3D.MipSlice = l;
+
+				ID3D11UnorderedAccessView* mipUnorderedAccessView;
+				hr = device->CreateUnorderedAccessView(mTexture, &unorderedAccessViewDesc, &mipUnorderedAccessView);
+				ATLASSERT(hr == S_OK);
+				mUnorderedAccessViewMips.push_back(mipUnorderedAccessView);
+			}
+		}
+	}
+}
+Texture3D::~Texture3D()
+{
+	if (mDesc.BindFlags & D3D11_BIND_SHADER_RESOURCE)
+	{
+		mShaderResourceView->Release();
+		mShaderResourceView = 0;
+		for (auto view : mShaderResourceViewMips)
+		{
+			view->Release();
+		}
+		mShaderResourceViewMips.clear();
+	}
+	if (mDesc.BindFlags & D3D11_BIND_UNORDERED_ACCESS)
+	{
+		mUnorderedAccessView->Release();
+		mUnorderedAccessView = 0;
+		for (auto view : mUnorderedAccessViewMips)
+		{
+			view->Release();
+		}
+		mUnorderedAccessViewMips.clear();
+	}
+	mTexture->Release();
+	mTexture = 0;
+}
+void Texture3D::initDefault(D3D11_TEXTURE3D_DESC& desc, DXGI_FORMAT format, UINT width, UINT height, UINT depth, bool uav)
+{
+	desc.Width = width;
+	desc.Height = height;
+	desc.Depth = depth;
+	desc.MipLevels = 1;
+	desc.Format = format;
+	desc.Usage = D3D11_USAGE_DEFAULT;
+	desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | (uav ? D3D11_BIND_UNORDERED_ACCESS : 0);
+	desc.CPUAccessFlags = 0;
+	desc.MiscFlags = 0;
+}
+
+
+
 SamplerState::SamplerState(D3D11_SAMPLER_DESC& desc)
 {
 	ID3D11Device* device = g_dx11Device->getDevice();

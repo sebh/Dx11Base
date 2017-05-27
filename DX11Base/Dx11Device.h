@@ -39,13 +39,30 @@ public:
 
 	static void setNullRenderTarget(ID3D11DeviceContext* devcon)
 	{
-		ID3D11RenderTargetView* nullRTV = nullptr;
-		devcon->OMSetRenderTargets(1, &nullRTV, nullptr);
+		ID3D11RenderTargetView*    nullRTV = nullptr;
+		ID3D11UnorderedAccessView* nullUAV = nullptr;
+		//devcon->OMSetRenderTargets(1, &nullRTV, nullptr);
+		devcon->OMSetRenderTargetsAndUnorderedAccessViews(1, &nullRTV, nullptr, 1, 0, &nullUAV, nullptr);
 	}
 	static void setNullPsResources(ID3D11DeviceContext* devcon)
 	{
-		static ID3D11ShaderResourceView* null[8] = { nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };	// not good
+		static ID3D11ShaderResourceView* null[8] = { nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };	// not good, only 8, would need something smarter maybe...
 		devcon->PSSetShaderResources(0, 8, null);
+	}
+	static void setNullVsResources(ID3D11DeviceContext* devcon)
+	{
+		static ID3D11ShaderResourceView* null[8] = { nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };
+		devcon->VSSetShaderResources(0, 8, null);
+	}
+	static void setNullCsResources(ID3D11DeviceContext* devcon)
+	{
+		static ID3D11ShaderResourceView* null[8] = { nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };
+		devcon->CSSetShaderResources(0, 8, null);
+	}
+	static void setNullCsUnorderedAccessViews(ID3D11DeviceContext* devcon)
+	{
+		static ID3D11UnorderedAccessView* null[8] = { nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };
+		devcon->CSSetUnorderedAccessViews(0, 8, null, nullptr);
 	}
 
 private:
@@ -183,6 +200,23 @@ private:
 	Texture2D(Texture2D&);
 };
 
+class Texture3D
+{
+public:
+	Texture3D(D3D11_TEXTURE3D_DESC& desc);
+	virtual ~Texture3D();
+	static void initDefault(D3D11_TEXTURE3D_DESC& desc, DXGI_FORMAT format, UINT width, UINT height, UINT depth, bool uav);
+	D3D11_TEXTURE3D_DESC mDesc;
+	ID3D11Texture3D* mTexture = nullptr;
+	ID3D11ShaderResourceView* mShaderResourceView = nullptr;			// level 0
+	ID3D11UnorderedAccessView* mUnorderedAccessView = nullptr;			// level 0
+	std::vector<ID3D11ShaderResourceView*> mShaderResourceViewMips;		// all levels
+	std::vector<ID3D11UnorderedAccessView*> mUnorderedAccessViewMips;	// all levels
+private:
+	Texture3D();
+	Texture3D(Texture2D&);
+};
+
 class SamplerState
 {
 public:
@@ -297,7 +331,7 @@ class HullShader : public ShaderBase
 public:
 	HullShader(const TCHAR* filename, const char* entryFunction);
 	virtual ~HullShader();
-private:
+public:///////////////////////////////////protected:
 	ID3D11HullShader* mHullShader;
 };
 
@@ -306,7 +340,7 @@ class DomainShader : public ShaderBase
 public:
 	DomainShader(const TCHAR* filename, const char* entryFunction);
 	virtual ~DomainShader();
-private:
+public:///////////////////////////////////protected:
 	ID3D11DomainShader* mDomainShader;
 };
 
@@ -315,7 +349,7 @@ class GeometryShader : public ShaderBase
 public:
 	GeometryShader(const TCHAR* filename, const char* entryFunction);
 	virtual ~GeometryShader();
-private:
+public:///////////////////////////////////protected:
 	ID3D11GeometryShader* mGeometryShader;
 };
 
@@ -324,7 +358,7 @@ class ComputeShader : public ShaderBase
 public:
 	ComputeShader(const TCHAR* filename, const char* entryFunction);
 	virtual ~ComputeShader();
-private:
+public:///////////////////////////////////protected:
 	ID3D11ComputeShader* mComputeShader;
 };
 
