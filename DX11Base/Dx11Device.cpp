@@ -892,7 +892,8 @@ void DxGpuPerformance::endFrame()
 			ATLASSERT(timer->mEnded);	// the timer must have been ended this frame
 
 			TimerGraphNode* node = timer->mNode[localReadTimerFrameId];
-			ATLASSERT(node);
+			if (!node)
+				continue;				// This can happen when a timer is registered later when some features are enabled.
 
 			while (context->GetData(timer->mBeginQueries[localReadTimerFrameId], &node->mBeginTick, sizeof(UINT64), 0) != S_OK);
 			while (context->GetData(timer->mEndQueries[localReadTimerFrameId], &node->mEndTick, sizeof(UINT64), 0) != S_OK);
@@ -906,7 +907,12 @@ void DxGpuPerformance::endFrame()
 			DxGpuPerformance::DxGpuTimer* timer = (*it).second;
 			if (!timer->mUsedThisFrame)	// we should test usePreviousFrame but that will be enough for now
 				continue;
-			minBeginTime = min(minBeginTime, timer->mNode[localReadTimerFrameId]->mBeginTick);
+
+			TimerGraphNode* node = timer->mNode[localReadTimerFrameId];
+			if (!node)
+				continue;				// This can happen when a timer is registered later when some features are enabled.
+
+			minBeginTime = min(minBeginTime, node->mBeginTick);
 		}
 
 
@@ -921,10 +927,13 @@ void DxGpuPerformance::endFrame()
 			timer->mUsedThisFrame = false;
 			timer->mEnded = false;
 
+			TimerGraphNode* node = timer->mNode[localReadTimerFrameId];
+			if (!node)
+				continue;				// This can happen when a timer is registered later when some features are enabled.
+
 			float beginMs = 0.0f;
 			float endMs = 0.0f;
 			float lastDurationMs = 0.0f;
-			TimerGraphNode* node = timer->mNode[localReadTimerFrameId];
 			if (node->disjointData.Disjoint == FALSE)
 			{
 				float factor = 1000.0f / float(node->disjointData.Frequency);
