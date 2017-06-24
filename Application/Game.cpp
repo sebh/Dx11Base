@@ -32,6 +32,48 @@ struct VertexType
 
 Game::Game()
 {
+}
+
+
+Game::~Game()
+{
+}
+
+
+void Game::loadShaders(bool exitIfFail)
+{
+	bool success = true;
+
+	success &= reload(&vertexShader, L"Resources\\TestShader.hlsl", "ColorVertexShader", exitIfFail);
+	success &= reload(&pixelShader, L"Resources\\TestShader.hlsl", "ColorPixelShader", exitIfFail);
+	success &= reload(&pixelShaderClear, L"Resources\\TestShader.hlsl", "ClearPixelShader", exitIfFail);
+	success &= reload(&pixelShaderFinal, L"Resources\\TestShader.hlsl", "FinalPixelShader", exitIfFail);
+
+	InputLayoutDescriptors inputLayout;
+	appendSimpleVertexDataToInputLayout(inputLayout, "POSITION", DXGI_FORMAT_R32G32B32_FLOAT);
+	appendSimpleVertexDataToInputLayout(inputLayout, "COLOR", DXGI_FORMAT_R32G32B32A32_FLOAT);
+	resetComPtr(&layout);
+	vertexShader->createInputLayout(inputLayout, &layout);	// Have a layout object with vertex stride in it
+}
+
+void Game::releaseShaders()
+{
+	resetPtr(&pixelShader);
+	resetPtr(&pixelShaderClear);
+	resetPtr(&pixelShaderFinal);
+	resetPtr(&vertexShader);
+	resetComPtr(&layout);
+}
+
+
+void Game::initialise()
+{
+	////////// Load and compile shaders
+
+	loadShaders(true);
+
+	////////// Create other resources
+
 	ID3D11Device* device = g_dx11Device->getDevice();
 	//ID3D11DeviceContext* context = g_dx11Device->getDeviceContext();
 
@@ -77,19 +119,9 @@ Game::Game()
 	RenderBuffer::initConstantBufferDesc_dynamic(constantBufferDesc, 128);
 	constantBuffer = new RenderBuffer(constantBufferDesc);
 
-	vertexShader = new VertexShader(L"Resources\\TestShader.hlsl", "ColorVertexShader");
-	pixelShader  = new PixelShader (L"Resources\\TestShader.hlsl", "ColorPixelShader");
-	pixelShaderClear  = new PixelShader (L"Resources\\TestShader.hlsl", "ClearPixelShader");
-	pixelShaderFinal  = new PixelShader (L"Resources\\TestShader.hlsl", "FinalPixelShader");
-
-	InputLayoutDescriptors inputLayout;
-	appendSimpleVertexDataToInputLayout(inputLayout, "POSITION", DXGI_FORMAT_R32G32B32_FLOAT);
-	appendSimpleVertexDataToInputLayout(inputLayout, "COLOR"   , DXGI_FORMAT_R32G32B32A32_FLOAT);
-	vertexShader->createInputLayout(inputLayout, &layout);	// Have a layout object with vertex stride in it
-
 	UINT bufferElementSize = (sizeof(float) * 4);
 	UINT bufferElementCount = 1280 * 720;
-	D3D11_BUFFER_DESC someBufferDesc = { bufferElementCount * bufferElementSize , D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE| D3D11_BIND_UNORDERED_ACCESS, 0, 0, 0 };
+	D3D11_BUFFER_DESC someBufferDesc = { bufferElementCount * bufferElementSize , D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS, 0, 0, 0 };
 	someBuffer = new RenderBuffer(someBufferDesc);
 
 	D3D11_UNORDERED_ACCESS_VIEW_DESC someBufferUavViewDesc;
@@ -102,35 +134,20 @@ Game::Game()
 	ATLASSERT(hr == S_OK);
 }
 
-
-Game::~Game()
+void Game::shutdown()
 {
+	////////// Release resources
+
 	delete constantBuffer;
 	delete indexBuffer;
 	delete vertexBuffer;
 
-	delete pixelShader;
-	delete pixelShaderClear;
-	delete pixelShaderFinal;
-	delete vertexShader;
-
-	layout->Release();
-
 	someBufferUavView->Release();
-
 	delete someBuffer;
-}
 
+	////////// Release shaders
 
-
-void Game::initialise()
-{
-	// TODO
-}
-
-void Game::shutdown()
-{
-	// TODO
+	releaseShaders();
 }
 
 void Game::update(const WindowInputData& inputData)
@@ -138,6 +155,19 @@ void Game::update(const WindowInputData& inputData)
 	for (auto& event : inputData.mInputEvents)
 	{
 		// Process events
+	}
+
+	// Listen to CTRL+S for shader live update in a very simple fashion (from http://www.lofibucket.com/articles/64k_intro.html)
+	static ULONGLONG lastLoadTime = GetTickCount64();
+	if (GetAsyncKeyState(VK_CONTROL) && GetAsyncKeyState('S'))
+	{
+		const ULONGLONG tickCount = GetTickCount64();
+		if (tickCount - lastLoadTime > 200)
+		{
+			Sleep(100);					// Wait for a while to let the file system finish the file write.
+			loadShaders(false);			// Reload (all) the shaders
+		}
+		lastLoadTime = tickCount;
 	}
 }
 

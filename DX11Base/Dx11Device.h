@@ -297,7 +297,7 @@ class ShaderBase
 public:
 	ShaderBase(const TCHAR* filename, const char* entryFunction, const char* profile);
 	virtual ~ShaderBase();
-
+	bool compilationSuccessful() { return mShaderBuffer != nullptr; }
 protected:
 	ID3D10Blob* mShaderBuffer;
 
@@ -496,11 +496,50 @@ private:
 #define GPU_SCOPED_TIMER(timerName, r, g, b) ScopedGpuTimer gpuTimer##timerName##(#timerName, r, g, b)
 #define GPU_SCOPED_TIMEREVENT(teName, r, g, b) GPU_SCOPED_EVENT(teName);GPU_SCOPED_TIMER(teName, r, g, b);
 
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
+template <class type>
+void resetComPtr(type** ptr)
+{
+	if (*ptr)
+	{
+		(*ptr)->Release();
+		(*ptr) = nullptr;
+	}
+}
 
+template <class type>
+void resetPtr(type** ptr)
+{
+	if (*ptr)
+	{
+		delete *ptr;
+		(*ptr) = nullptr;
+	}
+}
+
+// Can be used to load and live-update a shader
+template <class type>
+bool reload(type** previousShader, const TCHAR* filename, const char* entryFunction, bool exitIfFail)
+{
+	type* newShader = new type(filename, entryFunction);
+	if (newShader->compilationSuccessful())
+	{
+		resetPtr(previousShader);
+		*previousShader = newShader;
+		return true;
+	}
+	else
+	{
+		delete newShader;
+		if (exitIfFail)
+			exit(0);
+		return false;
+	}
+}
 
 

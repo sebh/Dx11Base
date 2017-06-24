@@ -399,7 +399,7 @@ Texture3D::Texture3D(D3D11_TEXTURE3D_DESC& desc) :
 		ATLASSERT(hr == S_OK);
 		if (desc.MipLevels > 1)
 		{
-			for (int l = 0; l < desc.MipLevels; ++l)
+			for (UINT l = 0; l < desc.MipLevels; ++l)
 			{
 				shaderResourceViewDesc.Texture3D.MostDetailedMip = l;
 				shaderResourceViewDesc.Texture3D.MipLevels = 1;
@@ -419,7 +419,7 @@ Texture3D::Texture3D(D3D11_TEXTURE3D_DESC& desc) :
 		ATLASSERT(hr == S_OK);
 		if (desc.MipLevels > 1)
 		{
-			for (int l = 0; l < desc.MipLevels; ++l)
+			for (UINT l = 0; l < desc.MipLevels; ++l)
 			{
 				unorderedAccessViewDesc.Texture3D.MipSlice = l;
 
@@ -642,6 +642,7 @@ void appendSimpleVertexDataToInputLayout(InputLayoutDescriptors& inputLayout, co
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 ShaderBase::ShaderBase(const TCHAR* filename, const char* entryFunction, const char* profile)
+	: mShaderBuffer(nullptr)
 {
 	ID3DBlob * errorbuffer = NULL;
 
@@ -674,30 +675,27 @@ ShaderBase::ShaderBase(const TCHAR* filename, const char* entryFunction, const c
 			errorbuffer->Release();
 		}
 
-		if (mShaderBuffer)
-			mShaderBuffer->Release();
+		resetComPtr(&mShaderBuffer);
 		OutputDebugStringA("\n\n");
-
-		// Not great but good enough for now...
-		exit(0);
 	}
 }
 
 ShaderBase::~ShaderBase()
 {
-	mShaderBuffer->Release();
+	resetComPtr(&mShaderBuffer);
 }
 
 VertexShader::VertexShader(const TCHAR* filename, const char* entryFunction)
 	: ShaderBase(filename, entryFunction, "vs_5_0")
 {
+	if (!compilationSuccessful()) return; // failed compilation
 	ID3D11Device* device = g_dx11Device->getDevice();
 	HRESULT hr = device->CreateVertexShader(mShaderBuffer->GetBufferPointer(), mShaderBuffer->GetBufferSize(), NULL, &mVertexShader);
 	ATLASSERT(hr == S_OK);
 }
 VertexShader::~VertexShader()
 {
-	mVertexShader->Release();
+	resetComPtr(&mVertexShader);
 }
 
 void VertexShader::createInputLayout(InputLayoutDescriptors inputLayout, ID3D11InputLayout** layout)
@@ -710,61 +708,66 @@ void VertexShader::createInputLayout(InputLayoutDescriptors inputLayout, ID3D11I
 PixelShader::PixelShader(const TCHAR* filename, const char* entryFunction)
 	: ShaderBase(filename, entryFunction, "ps_5_0")
 {
+	if (!compilationSuccessful()) return; // failed compilation
 	ID3D11Device* device = g_dx11Device->getDevice();
 	HRESULT hr = device->CreatePixelShader(mShaderBuffer->GetBufferPointer(), mShaderBuffer->GetBufferSize(), NULL, &mPixelShader);
 	ATLASSERT(hr == S_OK);
 }
 PixelShader::~PixelShader()
 {
-	mPixelShader->Release();
+	resetComPtr(&mPixelShader);
 }
 
 HullShader::HullShader(const TCHAR* filename, const char* entryFunction)
 	: ShaderBase(filename, entryFunction, "hs_5_0")
 {
+	if (!compilationSuccessful()) return; // failed compilation
 	ID3D11Device* device = g_dx11Device->getDevice();
 	HRESULT hr = device->CreateHullShader(mShaderBuffer->GetBufferPointer(), mShaderBuffer->GetBufferSize(), NULL, &mHullShader);
 	ATLASSERT(hr == S_OK);
 }
 HullShader::~HullShader()
 {
-	mHullShader->Release();
+	resetComPtr(&mHullShader);
 }
 
 DomainShader::DomainShader(const TCHAR* filename, const char* entryFunction)
 	: ShaderBase(filename, entryFunction, "ds_5_0")
 {
+	if (!compilationSuccessful()) return; // failed compilation
 	ID3D11Device* device = g_dx11Device->getDevice();
 	HRESULT hr = device->CreateDomainShader(mShaderBuffer->GetBufferPointer(), mShaderBuffer->GetBufferSize(), NULL, &mDomainShader);
 	ATLASSERT(hr == S_OK);
 }
 DomainShader::~DomainShader()
 {
-	mDomainShader->Release();
+	resetComPtr(&mDomainShader);
 }
 
 GeometryShader::GeometryShader(const TCHAR* filename, const char* entryFunction)
 	: ShaderBase(filename, entryFunction, "gs_5_0")
 {
+	if (!compilationSuccessful()) return; // failed compilation
 	ID3D11Device* device = g_dx11Device->getDevice();
 	HRESULT hr = device->CreateGeometryShader(mShaderBuffer->GetBufferPointer(), mShaderBuffer->GetBufferSize(), NULL, &mGeometryShader);
 	ATLASSERT(hr == S_OK);
 }
 GeometryShader::~GeometryShader()
 {
-	mGeometryShader->Release();
+	resetComPtr(&mGeometryShader);
 }
 
 ComputeShader::ComputeShader(const TCHAR* filename, const char* entryFunction)
 	: ShaderBase(filename, entryFunction, "cs_5_0")
 {
+	if (!compilationSuccessful()) return; // failed compilation
 	ID3D11Device* device = g_dx11Device->getDevice();
 	HRESULT hr = device->CreateComputeShader(mShaderBuffer->GetBufferPointer(), mShaderBuffer->GetBufferSize(), NULL, &mComputeShader);
 	ATLASSERT(hr == S_OK);
 }
 ComputeShader::~ComputeShader()
 {
-	mComputeShader->Release();
+	resetComPtr(&mComputeShader);
 }
 
 
