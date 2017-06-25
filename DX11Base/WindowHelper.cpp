@@ -179,10 +179,8 @@ InputKey translateKey(MSG& msg)
 	case VK_F10:					return kF10;
 	case VK_F11:					return kF11;
 	case VK_F12:					return kF12;
-	case VK_LSHIFT:					return kLshift;
-	case VK_RSHIFT:					return kRshift;
-	case VK_LCONTROL:				return kLcontrol;
-	case VK_RCONTROL:				return kRcontrol;
+	case VK_SHIFT:					return kShift;
+	case VK_CONTROL:				return kControl;
 
 	case '0': 						return k0;
 	case '1': 						return k1;
@@ -254,6 +252,18 @@ void WindowHelper::processKeyMessage(MSG& msg)
 		event.type = etKeyChar;
 		break;
 	}
+
+	if (event.key == kControl)
+	{
+		mInput.mInputStatus.keys[kLcontrol] = GetKeyState(VK_LCONTROL);
+		mInput.mInputStatus.keys[kRcontrol] = GetKeyState(VK_RCONTROL);
+	}
+	else if (event.key == kShift)
+	{
+		mInput.mInputStatus.keys[kLshift] = GetKeyState(VK_LSHIFT);
+		mInput.mInputStatus.keys[kRshift] = GetKeyState(VK_RSHIFT);
+	}
+
 	mInput.mInputEvents.push_back(event);
 }
 

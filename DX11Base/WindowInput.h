@@ -37,10 +37,13 @@ enum InputKey
 	kF10,
 	kF11,
 	kF12,
-	kLshift,
-	kRshift,
-	kLcontrol,
-	kRcontrol,
+
+	kShift,			// event and input status
+	kControl,		// event and input status
+	kLshift,		// never an event, only set on the input status
+	kRshift,		// never an event, only set on the input status
+	kLcontrol,		// never an event, only set on the input status
+	kRcontrol,		// never an event, only set on the input status
 
 	k0,
 	k1,
