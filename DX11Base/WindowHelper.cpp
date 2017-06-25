@@ -255,13 +255,13 @@ void WindowHelper::processKeyMessage(MSG& msg)
 
 	if (event.key == kControl)
 	{
-		mInput.mInputStatus.keys[kLcontrol] = GetKeyState(VK_LCONTROL);
-		mInput.mInputStatus.keys[kRcontrol] = GetKeyState(VK_RCONTROL);
+		mInput.mInputStatus.keys[kLcontrol] = GetKeyState(VK_LCONTROL)!=0;
+		mInput.mInputStatus.keys[kRcontrol] = GetKeyState(VK_RCONTROL)!=0;
 	}
 	else if (event.key == kShift)
 	{
-		mInput.mInputStatus.keys[kLshift] = GetKeyState(VK_LSHIFT);
-		mInput.mInputStatus.keys[kRshift] = GetKeyState(VK_RSHIFT);
+		mInput.mInputStatus.keys[kLshift] = GetKeyState(VK_LSHIFT)!=0;
+		mInput.mInputStatus.keys[kRshift] = GetKeyState(VK_RSHIFT)!=0;
 	}
 
 	mInput.mInputEvents.push_back(event);
