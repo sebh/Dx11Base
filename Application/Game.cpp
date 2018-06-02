@@ -231,8 +231,6 @@ void Game::render()
 		context->PSSetShader(pixelShaderClear->mPixelShader, NULL, 0);
 		context->DrawIndexed(3, 0, 0);
 
-		//ScopedGpuTimer
-
 		// Accum
 		context->PSSetShader(pixelShader->mPixelShader, NULL, 0);
 		context->DrawIndexed(12, 0, 0);

@@ -37,7 +37,12 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	DxGpuPerformance::initialise();
 
 	// Initialise imgui
+	ImGuiContext* imguiContext = ImGui::CreateContext();
+	ImGui::SetCurrentContext(imguiContext);
 	ImGui_ImplDX11_Init(win.getHwnd(), g_dx11Device->getDevice(), g_dx11Device->getDeviceContext());
+	// Setup style 
+	ImGui::StyleColorsDark();
+	//ImGui::StyleColorsClassic(); 
 
 	// Create the game
 	Game game;
@@ -57,7 +62,7 @@ int WINAPI WinMain(HINSTANCE hInstance,
 				break; // time to quit
 
 			// Update imgui
-			ImGui_ImplDX11_WndProcHandler(msg.hwnd, msg.message, msg.wParam, msg.lParam);
+			ImGui_ImplWin32_WndProcHandler(msg.hwnd, msg.message, msg.wParam, msg.lParam);
 
 			// Take into account window resize
 			if (msg.message == WM_SIZE && g_dx11Device != NULL && msg.wParam != SIZE_MINIMIZED)
@@ -92,7 +97,7 @@ int WINAPI WinMain(HINSTANCE hInstance,
 				const DxGpuPerformance::TimerGraphNode* timerGraphRootNode = DxGpuPerformance::getLastUpdatedTimerGraphRootNode();
 				if(timerGraphRootNode)
 				{
-					ImGui::SetNextWindowSize(ImVec2(400, 400), ImGuiSetCond_FirstUseEver);
+					ImGui::SetNextWindowSize(ImVec2(400.0f, 400.0f), ImGuiCond_FirstUseEver);
 					ImGui::Begin("GPU performance");
 
 					//////////////////////////////////////////////////////////////
@@ -110,7 +115,7 @@ int WINAPI WinMain(HINSTANCE hInstance,
 						bool printDone = false;
 						if (level == targetLevel)
 						{
-							ImColor color = ImColor(node->r, node->g, node->b);
+							ImU32 color = ImColor(node->r, node->g, node->b);
 							ImGui::PushStyleColor(ImGuiCol_Button, color);
 							ImGui::PushStyleColor(ImGuiCol_ButtonHovered, color);
 							ImGui::PushStyleColor(ImGuiCol_ButtonActive, color);
@@ -196,6 +201,7 @@ int WINAPI WinMain(HINSTANCE hInstance,
 
 				GPU_SCOPED_TIMEREVENT(Imgui, 0, 162, 232);
 				ImGui::Render();
+				ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 			}
 
 			// Swap the back buffer
@@ -208,8 +214,10 @@ int WINAPI WinMain(HINSTANCE hInstance,
 		}
 	}
 
-	game.shutdown();
 	ImGui_ImplDX11_Shutdown();
+	ImGui::DestroyContext(imguiContext);
+
+	game.shutdown();
 	DxGpuPerformance::shutdown();
 	Dx11Device::shutdown();
 
