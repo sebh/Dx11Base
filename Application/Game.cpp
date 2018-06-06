@@ -11,7 +11,16 @@
 // hack for testing
 RenderBuffer* vertexBuffer;
 RenderBuffer* indexBuffer;
-RenderBuffer* constantBuffer;
+
+struct ConstantBufferStructureExemple
+{
+	float f;
+	int i;
+	uint u;
+	float f2;
+};
+typedef ConstantBuffer<ConstantBufferStructureExemple> MyConstantBuffer;
+MyConstantBuffer* constantBuffer;
 
 RenderBuffer* someBuffer;
 ID3D11UnorderedAccessView* someBufferUavView;
@@ -49,7 +58,7 @@ void Game::loadShaders(bool exitIfFail)
 	success &= reload(&pixelShaderClear, L"Resources\\TestShader.hlsl", "ClearPixelShader", exitIfFail);
 	success &= reload(&pixelShaderFinal, L"Resources\\TestShader.hlsl", "FinalPixelShader", exitIfFail);
 
-	InputLayoutDescriptors inputLayout;
+	InputLayoutDesc inputLayout;
 	appendSimpleVertexDataToInputLayout(inputLayout, "POSITION", DXGI_FORMAT_R32G32B32_FLOAT);
 	appendSimpleVertexDataToInputLayout(inputLayout, "COLOR", DXGI_FORMAT_R32G32B32A32_FLOAT);
 	resetComPtr(&layout);
@@ -115,9 +124,7 @@ void Game::initialise()
 	RenderBuffer::initIndexBufferDesc_default(indexBufferDesc, sizeof(indices));
 	indexBuffer = new RenderBuffer(indexBufferDesc, indices);
 
-	D3D11_BUFFER_DESC constantBufferDesc;
-	RenderBuffer::initConstantBufferDesc_dynamic(constantBufferDesc, 128);
-	constantBuffer = new RenderBuffer(constantBufferDesc);
+	constantBuffer = new MyConstantBuffer();
 
 	UINT bufferElementSize = (sizeof(float) * 4);
 	UINT bufferElementCount = 1280 * 720;
@@ -189,15 +196,12 @@ void Game::render()
 
 	// Constant buffer test
 	{	
-		RenderBuffer::ScopedMappedRenderbuffer bufferMap;
-		constantBuffer->map(D3D11_MAP_WRITE_DISCARD, bufferMap);
-		((char*)bufferMap.getDataPtr())[0] = 0;
-		((char*)bufferMap.getDataPtr())[1] = 1;
-		((char*)bufferMap.getDataPtr())[2] = 2;
-		((char*)bufferMap.getDataPtr())[3] = 3;
-		((char*)bufferMap.getDataPtr())[4] = 4;
-		((char*)bufferMap.getDataPtr())[5] = 5;
-		((char*)bufferMap.getDataPtr())[6] = 6;
+		ConstantBufferStructureExemple cb;
+		cb.f = 1.0f;
+		cb.f2= 2.0f;
+		cb.i = -1;
+		cb.u = 2;
+		constantBuffer->update(cb);
 	}
 
 	{

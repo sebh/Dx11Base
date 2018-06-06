@@ -15,7 +15,7 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	int nCmdShow)
 {
 	static bool sVSyncEnable = true;
-	static float sTimerGraphWidth = 18.0f;
+	static float sTimerGraphWidth = 16.7f;	// 60FPS
 
 	// Get a window size that matches the desired client size
 	const unsigned int desiredPosX = 20;

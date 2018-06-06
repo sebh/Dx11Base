@@ -77,16 +77,16 @@ void Dx11Device::internalInitialise(const HWND& hWnd)
 
 #if DX_DEBUG_EVENT
 	// Could do more https://blogs.msdn.microsoft.com/chuckw/2012/11/30/direct3d-sdk-debug-layer-tricks/
+	// If this fails, make sure you have the graphic tools installed. (Apps/Manage optional features windows settings)
 	hr = mDevcon->QueryInterface(__uuidof(mUserDefinedAnnotation), reinterpret_cast<void**>(&mUserDefinedAnnotation));
 	ATLASSERT( hr == S_OK );
 #endif // DX_DEBUG_EVENT
 
 	// Create the back buffer RT
-	ID3D11Texture2D* mBackBufferTexture;// back buffer texture
-	mSwapchain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&mBackBufferTexture);
-	mDev->CreateRenderTargetView(mBackBufferTexture, NULL, &mBackBufferRT);
-	mBackBufferTexture->Release();
-	//DX_SET_DEBUG_NAME(mBackBufferTexture, "BackBuffer");	// Let dx name this
+	ID3D11Texture2D* backBufferTexture;// back buffer texture
+	mSwapchain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&backBufferTexture);
+	mDev->CreateRenderTargetView(backBufferTexture, NULL, &mBackBufferRT);
+	backBufferTexture->Release();
 
 	// By default, set the back buffer as current render target and viewport (no sate tracking for now...)
 	mDevcon->OMSetRenderTargets(1, &mBackBufferRT, NULL); 
@@ -123,6 +123,14 @@ void Dx11Device::internalInitialise(const HWND& hWnd)
 		&featuretest,
 		sizeof(D3D11_FEATURE_DATA_D3D11_OPTIONS2));
 	ATLASSERT(hr == S_OK);*/
+
+	/*D3D11_FEATURE_DATA_DOUBLES dataDouble;
+	hr = mDev->CheckFeatureSupport(D3D11_FEATURE_DOUBLES, &dataDouble, sizeof(dataDouble));
+	ATLASSERT(hr == S_OK);
+	if (!dataDouble.DoublePrecisionFloatShaderOps)
+	{
+		printf("No hardware support for double-precision.\n");
+	}*/
 }
 
 void Dx11Device::internalShutdown()
@@ -283,11 +291,11 @@ bool isFormatTypeless(DXGI_FORMAT format)
 	return false;
 }
 
-Texture2D::Texture2D(D3D11_TEXTURE2D_DESC& desc) :
+Texture2D::Texture2D(D3D11_TEXTURE2D_DESC& desc, D3D11_SUBRESOURCE_DATA* initialData) :
 	mDesc(desc)
 {
 	ID3D11Device* device = g_dx11Device->getDevice();
-	HRESULT hr = device->CreateTexture2D(&mDesc, nullptr, &mTexture);
+	HRESULT hr = device->CreateTexture2D(&mDesc, initialData, &mTexture);
 	ATLASSERT(hr == S_OK);
 
 	DXGI_FORMAT format = desc.Format;
@@ -547,6 +555,27 @@ void DepthStencilState::initDefaultDepthOnStencilOff(D3D11_DEPTH_STENCIL_DESC& d
 	desc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
 	desc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
 }
+void DepthStencilState::initDepthNoWriteStencilOff(D3D11_DEPTH_STENCIL_DESC& desc)
+{
+	// Depth test parameters
+	desc.DepthEnable = true;
+	desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
+	desc.DepthFunc = D3D11_COMPARISON_LESS;
+	// Stencil test parameters
+	desc.StencilEnable = false;
+	desc.StencilReadMask = 0xFF;
+	desc.StencilWriteMask = 0xFF;
+	// Stencil operations if pixel is front-facing
+	desc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+	desc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
+	desc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+	desc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+	// Stencil operations if pixel is back-facing
+	desc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+	desc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
+	desc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+	desc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+}
 
 RasterizerState::RasterizerState(D3D11_RASTERIZER_DESC& desc)
 {
@@ -600,6 +629,20 @@ void BlendState::initDisabledState(D3D11_BLEND_DESC & desc)
 	desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
 	desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
 }
+void BlendState::initPreMultBlendState(D3D11_BLEND_DESC & desc)
+{
+	desc = { 0 };
+	desc.AlphaToCoverageEnable = false;
+	desc.IndependentBlendEnable = false;
+	desc.RenderTarget[0].BlendEnable = true;
+	desc.RenderTarget[0].SrcBlend = D3D11_BLEND_ONE;
+	desc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+	desc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;				// src*1 + dst*(1.0 - srcA)
+	desc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ZERO;
+	desc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_INV_SRC_ALPHA;
+	desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;			// src*0 + dst * (1.0 - srcA)
+	desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+}
 void BlendState::initAdditiveState(D3D11_BLEND_DESC & desc)
 {
 	desc = { 0 };
@@ -621,7 +664,7 @@ void BlendState::initAdditiveState(D3D11_BLEND_DESC & desc)
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-void appendSimpleVertexDataToInputLayout(InputLayoutDescriptors& inputLayout, const char* semanticName, DXGI_FORMAT format)
+void appendSimpleVertexDataToInputLayout(InputLayoutDesc& inputLayout, const char* semanticName, DXGI_FORMAT format)
 {
 	D3D11_INPUT_ELEMENT_DESC desc;
 
@@ -698,7 +741,7 @@ VertexShader::~VertexShader()
 	resetComPtr(&mVertexShader);
 }
 
-void VertexShader::createInputLayout(InputLayoutDescriptors inputLayout, ID3D11InputLayout** layout)
+void VertexShader::createInputLayout(InputLayoutDesc inputLayout, ID3D11InputLayout** layout)
 {
 	ID3D11Device* device = g_dx11Device->getDevice();
 	HRESULT hr = device->CreateInputLayout(inputLayout.data(), UINT(inputLayout.size()), mShaderBuffer->GetBufferPointer(), mShaderBuffer->GetBufferSize(), layout);

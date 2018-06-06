@@ -19,6 +19,13 @@
 	#pragma comment( lib, "dxguid.lib")	// For debug name guid
 #endif
 
+typedef ID3D11DeviceContext RenderContext;
+typedef ID3D11InputLayout InputLayout;
+typedef D3D11_VIEWPORT Viewport;
+typedef ID3D11ShaderResourceView ShaderResourceView;
+typedef ID3D11UnorderedAccessView UnorderedAccessView;
+typedef unsigned int uint;
+
 class Dx11Device
 {
 public:
@@ -46,18 +53,18 @@ public:
 	}
 	static void setNullPsResources(ID3D11DeviceContext* devcon)
 	{
-		static ID3D11ShaderResourceView* null[8] = { nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };	// not good, only 8, would need something smarter maybe...
-		devcon->PSSetShaderResources(0, 8, null);
+		static ID3D11ShaderResourceView* null[16] = { nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };	// not good, only 8, would need something smarter maybe...
+		devcon->PSSetShaderResources(0, 16, null);
 	}
 	static void setNullVsResources(ID3D11DeviceContext* devcon)
 	{
-		static ID3D11ShaderResourceView* null[8] = { nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };
-		devcon->VSSetShaderResources(0, 8, null);
+		static ID3D11ShaderResourceView* null[16] = { nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };
+		devcon->VSSetShaderResources(0, 16, null);
 	}
 	static void setNullCsResources(ID3D11DeviceContext* devcon)
 	{
-		static ID3D11ShaderResourceView* null[8] = { nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };
-		devcon->CSSetShaderResources(0, 8, null);
+		static ID3D11ShaderResourceView* null[16] = { nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };
+		devcon->CSSetShaderResources(0, 16, null);
 	}
 	static void setNullCsUnorderedAccessViews(ID3D11DeviceContext* devcon)
 	{
@@ -177,6 +184,31 @@ private:
 };
 
 
+template<typename T>
+class ConstantBuffer : public RenderBuffer
+{
+public:
+	ConstantBuffer() : RenderBuffer(getDesc(), nullptr) {}
+
+	void update(const T& content)
+	{
+		ATLASSERT(mBuffer != nullptr);
+		RenderBuffer::ScopedMappedRenderbuffer bufferMap;
+		map(D3D11_MAP_WRITE_DISCARD, bufferMap);
+		T* cb = (T*)bufferMap.getDataPtr();
+		memcpy(cb, &content, sizeof(T));
+	}
+private:
+
+	static D3D11_BUFFER_DESC getDesc()
+	{
+		ATLASSERT(sizeof(T) % 16 == 0);
+		D3D11_BUFFER_DESC desc;
+		RenderBuffer::initConstantBufferDesc_dynamic(desc, sizeof(T));
+		return desc;
+	}
+};
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -185,7 +217,7 @@ private:
 class Texture2D
 {
 public:
-	Texture2D(D3D11_TEXTURE2D_DESC& desc);
+	Texture2D(D3D11_TEXTURE2D_DESC& desc, D3D11_SUBRESOURCE_DATA* initialData = nullptr);
 	virtual ~Texture2D();
 	static void initDepthStencilBuffer(D3D11_TEXTURE2D_DESC& desc, UINT width, UINT height, bool uav);
 	static void initDefault(D3D11_TEXTURE2D_DESC& desc, DXGI_FORMAT format, UINT width, UINT height, bool renderTarget, bool uav);
@@ -230,6 +262,20 @@ private:
 	SamplerState(SamplerState&);
 };
 
+struct RenderTarget
+{
+	Texture2D* colorTexture = nullptr;
+	Texture2D* depthTexture = nullptr;
+};
+
+inline void deleteRenderTarget(RenderTarget& rt)
+{
+	delete rt.colorTexture;
+	delete rt.depthTexture;
+	rt.colorTexture = nullptr;
+	rt.depthTexture = nullptr;
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -242,6 +288,7 @@ public:
 	DepthStencilState(D3D11_DEPTH_STENCIL_DESC& desc);
 	virtual ~DepthStencilState();
 	static void initDefaultDepthOnStencilOff(D3D11_DEPTH_STENCIL_DESC& desc);
+	static void initDepthNoWriteStencilOff(D3D11_DEPTH_STENCIL_DESC& desc);
 	ID3D11DepthStencilState* mState;
 private:
 	DepthStencilState();
@@ -266,6 +313,7 @@ public:
 	BlendState(D3D11_BLEND_DESC & desc);
 	virtual ~BlendState();
 	static void initDisabledState(D3D11_BLEND_DESC & desc);
+	static void initPreMultBlendState(D3D11_BLEND_DESC & desc);
 	static void initAdditiveState(D3D11_BLEND_DESC & desc);
 	ID3D11BlendState* mState;
 private:
@@ -279,10 +327,10 @@ private:
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-typedef std::vector<D3D11_INPUT_ELEMENT_DESC> InputLayoutDescriptors;
+typedef std::vector<D3D11_INPUT_ELEMENT_DESC> InputLayoutDesc;
 
 // Append a simple per vertex data layout input 
-void appendSimpleVertexDataToInputLayout(InputLayoutDescriptors& inputLayout, const char* semanticName, DXGI_FORMAT format);
+void appendSimpleVertexDataToInputLayout(InputLayoutDesc& inputLayout, const char* semanticName, DXGI_FORMAT format);
 
 // Semantic names: https://msdn.microsoft.com/en-us/library/windows/desktop/bb509647(v=vs.85).aspx
 
@@ -312,7 +360,7 @@ class VertexShader : public ShaderBase
 public:
 	VertexShader(const TCHAR* filename, const char* entryFunction);
 	virtual ~VertexShader();
-	void createInputLayout(InputLayoutDescriptors inputLayout, ID3D11InputLayout** layout);	// abstract that better
+	void createInputLayout(InputLayoutDesc inputLayout, ID3D11InputLayout** layout);	// abstract that better
 public:///////////////////////////////////protected:
 	ID3D11VertexShader* mVertexShader;
 };
@@ -375,7 +423,7 @@ public:///////////////////////////////////protected:
 #define V_GPU_TIMER_FRAMECOUNT 3
 
 /// Maximum number of timer in a frame and timer graph
-#define V_TIMER_MAX_COUNT 128
+#define V_TIMER_MAX_COUNT 512
 
 class DxGpuPerformance
 {
