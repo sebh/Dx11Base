@@ -1,42 +1,10 @@
 
 #include "Game.h"
-#include "Dx11Base/Dx11Device.h"
 
 #include "windows.h"
 #include "DirectXMath.h"
 
 #include <imgui.h>
-
-
-// hack for testing
-RenderBuffer* vertexBuffer;
-RenderBuffer* indexBuffer;
-
-struct ConstantBufferStructureExemple
-{
-	float f;
-	int i;
-	uint u;
-	float f2;
-};
-typedef ConstantBuffer<ConstantBufferStructureExemple> MyConstantBuffer;
-MyConstantBuffer* constantBuffer;
-
-RenderBuffer* someBuffer;
-ID3D11UnorderedAccessView* someBufferUavView;
-
-VertexShader* vertexShader;
-PixelShader*  pixelShader;
-PixelShader*  pixelShaderClear;
-PixelShader*  pixelShaderFinal;
-
-ID3D11InputLayout* layout;
-
-struct VertexType
-{
-	float position[3];
-	float color[4];
-};
 
 
 Game::Game()
@@ -53,25 +21,25 @@ void Game::loadShaders(bool exitIfFail)
 {
 	bool success = true;
 
-	success &= reload(&vertexShader, L"Resources\\TestShader.hlsl", "ColorVertexShader", exitIfFail);
-	success &= reload(&pixelShader, L"Resources\\TestShader.hlsl", "ColorPixelShader", exitIfFail);
-	success &= reload(&pixelShaderClear, L"Resources\\TestShader.hlsl", "ClearPixelShader", exitIfFail);
-	success &= reload(&pixelShaderFinal, L"Resources\\TestShader.hlsl", "FinalPixelShader", exitIfFail);
+	success &= reload(&mVertexShader, L"Resources\\TestShader.hlsl", "ColorVertexShader", exitIfFail);
+	success &= reload(&mPixelShader, L"Resources\\TestShader.hlsl", "ColorPixelShader", exitIfFail);
+	success &= reload(&mPixelShaderClear, L"Resources\\TestShader.hlsl", "ClearPixelShader", exitIfFail);
+	success &= reload(&mPixelShaderFinal, L"Resources\\TestShader.hlsl", "FinalPixelShader", exitIfFail);
 
 	InputLayoutDesc inputLayout;
 	appendSimpleVertexDataToInputLayout(inputLayout, "POSITION", DXGI_FORMAT_R32G32B32_FLOAT);
 	appendSimpleVertexDataToInputLayout(inputLayout, "COLOR", DXGI_FORMAT_R32G32B32A32_FLOAT);
-	resetComPtr(&layout);
-	vertexShader->createInputLayout(inputLayout, &layout);	// Have a layout object with vertex stride in it
+	resetComPtr(&mLayout);
+	mVertexShader->createInputLayout(inputLayout, &mLayout);	// Have a layout object with vertex stride in it
 }
 
 void Game::releaseShaders()
 {
-	resetPtr(&pixelShader);
-	resetPtr(&pixelShaderClear);
-	resetPtr(&pixelShaderFinal);
-	resetPtr(&vertexShader);
-	resetComPtr(&layout);
+	resetPtr(&mPixelShader);
+	resetPtr(&mPixelShaderClear);
+	resetPtr(&mPixelShaderFinal);
+	resetPtr(&mVertexShader);
+	resetComPtr(&mLayout);
 }
 
 
@@ -124,12 +92,12 @@ void Game::initialise()
 	RenderBuffer::initIndexBufferDesc_default(indexBufferDesc, sizeof(indices));
 	indexBuffer = new RenderBuffer(indexBufferDesc, indices);
 
-	constantBuffer = new MyConstantBuffer();
+	mConstantBuffer = new MyConstantBuffer();
 
 	UINT bufferElementSize = (sizeof(float) * 4);
 	UINT bufferElementCount = 1280 * 720;
 	D3D11_BUFFER_DESC someBufferDesc = { bufferElementCount * bufferElementSize , D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS, 0, 0, 0 };
-	someBuffer = new RenderBuffer(someBufferDesc);
+	mSomeBuffer = new RenderBuffer(someBufferDesc);
 
 	D3D11_UNORDERED_ACCESS_VIEW_DESC someBufferUavViewDesc;
 	someBufferUavViewDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
@@ -137,7 +105,7 @@ void Game::initialise()
 	someBufferUavViewDesc.Buffer.FirstElement = 0;
 	someBufferUavViewDesc.Buffer.NumElements = bufferElementCount;
 	someBufferUavViewDesc.Buffer.Flags = 0; // D3D11_BUFFER_UAV_FLAG_RAW
-	HRESULT hr = device->CreateUnorderedAccessView(someBuffer->mBuffer, &someBufferUavViewDesc, &someBufferUavView);
+	HRESULT hr = device->CreateUnorderedAccessView(mSomeBuffer->mBuffer, &someBufferUavViewDesc, &mSomeBufferUavView);
 	ATLASSERT(hr == S_OK);
 }
 
@@ -145,12 +113,12 @@ void Game::shutdown()
 {
 	////////// Release resources
 
-	delete constantBuffer;
+	delete mConstantBuffer;
 	delete indexBuffer;
 	delete vertexBuffer;
 
-	someBufferUavView->Release();
-	delete someBuffer;
+	mSomeBufferUavView->Release();
+	delete mSomeBuffer;
 
 	////////// Release shaders
 
@@ -179,14 +147,6 @@ void Game::update(const WindowInputData& inputData)
 }
 
 
-void costTest(int loop)
-{
-	ID3D11DeviceContext* context = g_dx11Device->getDeviceContext();
-	context->PSSetShader(pixelShaderFinal->mPixelShader, NULL, 0);
-	for(int i=0; i<loop; ++i)
-		context->DrawIndexed(3, 0, 0);
-}
-
 void Game::render()
 {
 	GPU_SCOPED_TIMEREVENT(GameRender, 75, 75, 75);
@@ -201,7 +161,7 @@ void Game::render()
 		cb.f2= 2.0f;
 		cb.i = -1;
 		cb.u = 2;
-		constantBuffer->update(cb);
+		mConstantBuffer->update(cb);
 	}
 
 	{
@@ -212,7 +172,7 @@ void Game::render()
 		context->ClearRenderTargetView(backBuffer, &clearColor.r);
 
 		const UINT* initialCount = 0;
-		context->OMSetRenderTargetsAndUnorderedAccessViews(1, &backBuffer, nullptr, 1, 1, &someBufferUavView, initialCount);
+		context->OMSetRenderTargetsAndUnorderedAccessViews(1, &backBuffer, nullptr, 1, 1, &mSomeBufferUavView, initialCount);
 	}
 
 	{
@@ -226,17 +186,17 @@ void Game::render()
 		context->IASetIndexBuffer(indexBuffer->mBuffer, DXGI_FORMAT_R32_UINT, 0);
 		context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		// Set the vertex input layout.
-		context->IASetInputLayout(layout);
+		context->IASetInputLayout(mLayout);
 
 		// Set the vertex and pixel shaders that will be used to render this triangle.
-		context->VSSetShader(vertexShader->mVertexShader, NULL, 0);
+		context->VSSetShader(mVertexShader->mVertexShader, NULL, 0);
 
 		// Clear
-		context->PSSetShader(pixelShaderClear->mPixelShader, NULL, 0);
+		context->PSSetShader(mPixelShaderClear->mPixelShader, NULL, 0);
 		context->DrawIndexed(3, 0, 0);
 
 		// Accum
-		context->PSSetShader(pixelShader->mPixelShader, NULL, 0);
+		context->PSSetShader(mPixelShader->mPixelShader, NULL, 0);
 		context->DrawIndexed(12, 0, 0);
 	}
 
@@ -244,9 +204,17 @@ void Game::render()
 		GPU_SCOPED_TIMER(FinalPass, 34, 177, 76);
 
 		// Final view
-		context->PSSetShader(pixelShaderFinal->mPixelShader, NULL, 0);
+		context->PSSetShader(mPixelShaderFinal->mPixelShader, NULL, 0);
 		context->DrawIndexed(3, 0, 0);
 	}
+
+	auto costTest = [&](int loop)
+	{
+		ID3D11DeviceContext* context = g_dx11Device->getDeviceContext();
+		context->PSSetShader(mPixelShaderFinal->mPixelShader, NULL, 0);
+		for (int i = 0; i<loop; ++i)
+			context->DrawIndexed(3, 0, 0);
+	};
 
 	{
 		GPU_SCOPED_TIMER(Shadow, 128, 128, 255);
