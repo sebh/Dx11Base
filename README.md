@@ -1,6 +1,6 @@
 # Dx11Base
 
-![dx11appscreenshot](https://github.com/sebh/HairVolume/raw/master/DX11Application.png)
+![dx11appscreenshot](https://github.com/sebh/Dx11Base/blob/master/DX11Application.png)
 
 A small dx11 base program I use to test shaders and techniques (windows only).
 It is meant to be simple and extended to your needs (nothing fancy here).
