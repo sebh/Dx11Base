@@ -5,7 +5,9 @@
 #include "Game.h"
 
 #include <imgui.h>
-#include "imgui\imgui_impl_dx11.h"
+#include "imgui\examples\imgui_impl_dx11.h" 
+#include "imgui\examples\imgui_impl_win32.h" s
+extern IMGUI_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 
 // the entry point for any Windows program
@@ -39,7 +41,8 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	// Initialise imgui
 	ImGuiContext* imguiContext = ImGui::CreateContext();
 	ImGui::SetCurrentContext(imguiContext);
-	ImGui_ImplDX11_Init(win.getHwnd(), g_dx11Device->getDevice(), g_dx11Device->getDeviceContext());
+	ImGui_ImplWin32_Init(win.getHwnd());
+	ImGui_ImplDX11_Init(g_dx11Device->getDevice(), g_dx11Device->getDeviceContext());
 	// Setup style 
 	ImGui::StyleColorsDark();
 	//ImGui::StyleColorsClassic(); 
@@ -80,7 +83,9 @@ int WINAPI WinMain(HINSTANCE hInstance,
 			const char* frameGpuTimerName = "Frame";
 			DxGpuPerformance::startGpuTimer(frameGpuTimerName, 150, 150, 150);
 
+			ImGui_ImplWin32_NewFrame();
 			ImGui_ImplDX11_NewFrame();
+			ImGui::NewFrame();
 
 			// Game update
 			game.update(win.getInputData());
@@ -215,6 +220,7 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	}
 
 	ImGui_ImplDX11_Shutdown();
+	ImGui_ImplWin32_Shutdown();
 	ImGui::DestroyContext(imguiContext);
 
 	game.shutdown();
