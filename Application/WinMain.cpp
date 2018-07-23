@@ -6,8 +6,10 @@
 
 #include <imgui.h>
 #include "imgui\examples\imgui_impl_dx11.h" 
-#include "imgui\examples\imgui_impl_win32.h" s
-extern IMGUI_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+#include "imgui\examples\imgui_impl_win32.h"
+
+// Declaration of a Imgui function we need (see imgui_impl_win32.h)
+IMGUI_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 
 // the entry point for any Windows program
