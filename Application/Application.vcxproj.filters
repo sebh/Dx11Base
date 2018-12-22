@@ -38,6 +38,9 @@
     <ClCompile Include="..\imgui\examples\imgui_impl_win32.cpp">
       <Filter>Imgui</Filter>
     </ClCompile>
+    <ClCompile Include="..\imgui\imgui_widgets.cpp">
+      <Filter>Imgui</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Game.h">
