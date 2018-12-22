@@ -24,6 +24,8 @@ typedef ID3D11InputLayout InputLayout;
 typedef D3D11_VIEWPORT Viewport;
 typedef ID3D11ShaderResourceView ShaderResourceView;
 typedef ID3D11UnorderedAccessView UnorderedAccessView;
+typedef ID3D11RenderTargetView RenderTargetView;
+typedef ID3D11DepthStencilView DepthStencilView;
 typedef unsigned int uint;
 
 class Dx11Device
@@ -34,9 +36,9 @@ public:
 	static void shutdown();
 
 	ID3D11Device*							getDevice()			{ return mDev; }
-	ID3D11DeviceContext*					getDeviceContext()	{ return mDevcon; }
+	RenderContext*							getDeviceContext()	{ return mDevcon; }
 	IDXGISwapChain*							getSwapChain()		{ return mSwapchain; }
-	ID3D11RenderTargetView*					getBackBufferRT()	{ return mBackBufferRT; }
+	RenderTargetView*						getBackBufferRT()	{ return mBackBufferRT; }
 
 #if DX_DEBUG_EVENT
 	CComPtr<ID3DUserDefinedAnnotation>		mUserDefinedAnnotation;
@@ -44,31 +46,31 @@ public:
 
 	void swap(bool vsyncEnabled);
 
-	static void setNullRenderTarget(ID3D11DeviceContext* devcon)
+	static void setNullRenderTarget(RenderContext* devcon)
 	{
-		ID3D11RenderTargetView*    nullRTV = nullptr;
-		ID3D11UnorderedAccessView* nullUAV = nullptr;
+		RenderTargetView*    nullRTV = nullptr;
+		UnorderedAccessView* nullUAV = nullptr;
 		//devcon->OMSetRenderTargets(1, &nullRTV, nullptr);
 		devcon->OMSetRenderTargetsAndUnorderedAccessViews(1, &nullRTV, nullptr, 1, 0, &nullUAV, nullptr);
 	}
-	static void setNullPsResources(ID3D11DeviceContext* devcon)
+	static void setNullPsResources(RenderContext* devcon)
 	{
-		static ID3D11ShaderResourceView* null[16] = { nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };	// not good, only 8, would need something smarter maybe...
+		static ShaderResourceView* null[16] = { nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };	// not good, only 8, would need something smarter maybe...
 		devcon->PSSetShaderResources(0, 16, null);
 	}
-	static void setNullVsResources(ID3D11DeviceContext* devcon)
+	static void setNullVsResources(RenderContext* devcon)
 	{
-		static ID3D11ShaderResourceView* null[16] = { nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };
+		static ShaderResourceView* null[16] = { nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };
 		devcon->VSSetShaderResources(0, 16, null);
 	}
-	static void setNullCsResources(ID3D11DeviceContext* devcon)
+	static void setNullCsResources(RenderContext* devcon)
 	{
-		static ID3D11ShaderResourceView* null[16] = { nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };
+		static ShaderResourceView* null[16] = { nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };
 		devcon->CSSetShaderResources(0, 16, null);
 	}
-	static void setNullCsUnorderedAccessViews(ID3D11DeviceContext* devcon)
+	static void setNullCsUnorderedAccessViews(RenderContext* devcon)
 	{
-		static ID3D11UnorderedAccessView* null[8] = { nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };
+		static UnorderedAccessView* null[8] = { nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };
 		devcon->CSSetUnorderedAccessViews(0, 8, null, nullptr);
 	}
 
@@ -83,9 +85,9 @@ private:
 
 	IDXGISwapChain*							mSwapchain;				// the pointer to the swap chain interface
 	ID3D11Device*							mDev;					// the pointer to our Direct3D device interface
-	ID3D11DeviceContext*					mDevcon;				// the pointer to our Direct3D device context
+	RenderContext*							mDevcon;				// the pointer to our Direct3D device context
 
-	ID3D11RenderTargetView*					mBackBufferRT;			// back buffer render target
+	RenderTargetView*						mBackBufferRT;			// back buffer render target
 };
 
 extern Dx11Device* g_dx11Device;
@@ -223,10 +225,10 @@ public:
 	static void initDefault(D3D11_TEXTURE2D_DESC& desc, DXGI_FORMAT format, UINT width, UINT height, bool renderTarget, bool uav);
 	D3D11_TEXTURE2D_DESC mDesc;
 	ID3D11Texture2D* mTexture = nullptr;
-	ID3D11DepthStencilView* mDepthStencilView = nullptr;
-	ID3D11RenderTargetView* mRenderTargetView = nullptr;
-	ID3D11ShaderResourceView* mShaderResourceView = nullptr;
-	ID3D11UnorderedAccessView* mUnorderedAccessView = nullptr;
+	DepthStencilView* mDepthStencilView = nullptr;
+	RenderTargetView* mRenderTargetView = nullptr;
+	ShaderResourceView* mShaderResourceView = nullptr;
+	UnorderedAccessView* mUnorderedAccessView = nullptr;
 private:
 	Texture2D();
 	Texture2D(Texture2D&);
@@ -235,15 +237,15 @@ private:
 class Texture3D
 {
 public:
-	Texture3D(D3D11_TEXTURE3D_DESC& desc);
+	Texture3D(D3D11_TEXTURE3D_DESC& desc, D3D11_SUBRESOURCE_DATA* initialData = nullptr);
 	virtual ~Texture3D();
 	static void initDefault(D3D11_TEXTURE3D_DESC& desc, DXGI_FORMAT format, UINT width, UINT height, UINT depth, bool uav);
 	D3D11_TEXTURE3D_DESC mDesc;
 	ID3D11Texture3D* mTexture = nullptr;
-	ID3D11ShaderResourceView* mShaderResourceView = nullptr;			// level 0
-	ID3D11UnorderedAccessView* mUnorderedAccessView = nullptr;			// level 0
-	std::vector<ID3D11ShaderResourceView*> mShaderResourceViewMips;		// all levels
-	std::vector<ID3D11UnorderedAccessView*> mUnorderedAccessViewMips;	// all levels
+	ShaderResourceView* mShaderResourceView = nullptr;			// level 0
+	UnorderedAccessView* mUnorderedAccessView = nullptr;			// level 0
+	std::vector<ShaderResourceView*> mShaderResourceViewMips;		// all levels
+	std::vector<UnorderedAccessView*> mUnorderedAccessViewMips;	// all levels
 private:
 	Texture3D();
 	Texture3D(Texture2D&);
@@ -314,6 +316,7 @@ public:
 	virtual ~BlendState();
 	static void initDisabledState(D3D11_BLEND_DESC & desc);
 	static void initPreMultBlendState(D3D11_BLEND_DESC & desc);
+	static void initPreMultDualBlendState(D3D11_BLEND_DESC & desc);
 	static void initAdditiveState(D3D11_BLEND_DESC & desc);
 	ID3D11BlendState* mState;
 private:
@@ -339,74 +342,95 @@ void appendSimpleVertexDataToInputLayout(InputLayoutDesc& inputLayout, const cha
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-
+struct ShaderMacro
+{
+	// We use string here to own the memory.
+	// This is a requirement for delayed loading with non static shader parameter (created on stack or heap with unkown lifetime)
+	std::string Name;
+	std::string Definition;
+};
+typedef std::vector<ShaderMacro> Macros; // D3D_SHADER_MACRO contains pointers to string so those string must be static as of today.
 class ShaderBase
 {
 public:
-	ShaderBase(const TCHAR* filename, const char* entryFunction, const char* profile);
+	ShaderBase(const TCHAR* filename, const char* entryFunction, const char* profile, const Macros* macros = nullptr, bool lazyCompilation = false);
 	virtual ~ShaderBase();
 	bool compilationSuccessful() { return mShaderBuffer != nullptr; }
+	void markDirty() { mDirty = true; }
+
 protected:
 	ID3D10Blob* mShaderBuffer;
+	const TCHAR* mFilename;
+	const char* mEntryFunction;
+	const char* mProfile;
+	Macros mMacros;
+	bool mDirty = true;		// If dirty, needs to be recompiled
+
+	inline bool recompileShaderIfNeeded();
 
 private:
 	ShaderBase();
 	ShaderBase(ShaderBase&);
 };
-// TODO use ComPtr
 
 class VertexShader : public ShaderBase
 {
 public:
-	VertexShader(const TCHAR* filename, const char* entryFunction);
+	VertexShader(const TCHAR* filename, const char* entryFunction, const Macros* macros = nullptr, bool lazyCompilation = false);
 	virtual ~VertexShader();
-	void createInputLayout(InputLayoutDesc inputLayout, ID3D11InputLayout** layout);	// abstract that better
-public:///////////////////////////////////protected:
+	void createInputLayout(InputLayoutDesc inputLayout, InputLayout** layout);	// abstract that better
+	void setShader(RenderContext& context);
+private:
 	ID3D11VertexShader* mVertexShader;
 };
 
 class PixelShader : public ShaderBase
 {
 public:
-	PixelShader(const TCHAR* filename, const char* entryFunction);
+	PixelShader(const TCHAR* filename, const char* entryFunction, const Macros* macros = nullptr, bool lazyCompilation = false);
 	virtual ~PixelShader();
-public:///////////////////////////////////protected:
+	void setShader(RenderContext& context);
+private:
 	ID3D11PixelShader* mPixelShader;
 };
 
 class HullShader : public ShaderBase
 {
 public:
-	HullShader(const TCHAR* filename, const char* entryFunction);
+	HullShader(const TCHAR* filename, const char* entryFunction, const Macros* macros = nullptr, bool lazyCompilation = false);
 	virtual ~HullShader();
-public:///////////////////////////////////protected:
+	void setShader(RenderContext& context);
+private:
 	ID3D11HullShader* mHullShader;
 };
 
 class DomainShader : public ShaderBase
 {
 public:
-	DomainShader(const TCHAR* filename, const char* entryFunction);
+	DomainShader(const TCHAR* filename, const char* entryFunction, const Macros* macros = nullptr, bool lazyCompilation = false);
 	virtual ~DomainShader();
-public:///////////////////////////////////protected:
+	void setShader(RenderContext& context);
+private:
 	ID3D11DomainShader* mDomainShader;
 };
 
 class GeometryShader : public ShaderBase
 {
 public:
-	GeometryShader(const TCHAR* filename, const char* entryFunction);
+	GeometryShader(const TCHAR* filename, const char* entryFunction, const Macros* macros = nullptr, bool lazyCompilation = false);
 	virtual ~GeometryShader();
-public:///////////////////////////////////protected:
+	void setShader(RenderContext& context);
+private:
 	ID3D11GeometryShader* mGeometryShader;
 };
 
 class ComputeShader : public ShaderBase
 {
 public:
-	ComputeShader(const TCHAR* filename, const char* entryFunction);
+	ComputeShader(const TCHAR* filename, const char* entryFunction, const Macros* macros = nullptr, bool lazyCompilation = false);
 	virtual ~ComputeShader();
-public:///////////////////////////////////protected:
+	void setShader(RenderContext& context);
+private:
 	ID3D11ComputeShader* mComputeShader;
 };
 
@@ -570,13 +594,15 @@ void resetPtr(type** ptr)
 	}
 }
 
-// Can be used to load and live-update a shader
+// Can be used to load and reload (live update) a shader
 template <class type>
-bool reload(type** previousShader, const TCHAR* filename, const char* entryFunction, bool exitIfFail)
+bool reload(type** previousShader, const TCHAR* filename, const char* entryFunction, bool exitIfFail, const Macros* macros = NULL, bool lazyCompilation = false)
 {
-	type* newShader = new type(filename, entryFunction);
-	if (newShader->compilationSuccessful())
+	type* newShader = new type(filename, entryFunction, macros, lazyCompilation);
+	if (newShader->compilationSuccessful() || lazyCompilation)
 	{
+		// if lazyCompilation, we need to assign the newly create object. Later compilation that do not want to recreate object should just mark the shader object as dirty.
+		// If compilation succesful also.
 		resetPtr(previousShader);
 		*previousShader = newShader;
 		return true;
@@ -589,5 +615,14 @@ bool reload(type** previousShader, const TCHAR* filename, const char* entryFunct
 		return false;
 	}
 }
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+int divRoundUp(int numer, int denum);
 
 

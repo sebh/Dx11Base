@@ -17,14 +17,30 @@ Game::~Game()
 }
 
 
-void Game::loadShaders(bool exitIfFail)
+void Game::loadShaders(bool firstTimeLoadShaders)
 {
 	bool success = true;
 
-	success &= reload(&mVertexShader, L"Resources\\TestShader.hlsl", "ColorVertexShader", exitIfFail);
-	success &= reload(&mPixelShader, L"Resources\\TestShader.hlsl", "ColorPixelShader", exitIfFail);
-	success &= reload(&mPixelShaderClear, L"Resources\\TestShader.hlsl", "ClearPixelShader", exitIfFail);
-	success &= reload(&mPixelShaderFinal, L"Resources\\TestShader.hlsl", "FinalPixelShader", exitIfFail);
+	auto reloadShader = [&](auto** previousShader, const TCHAR* filename, const char* entryFunction, bool firstTimeLoadShaders, const Macros* macros = NULL, bool lazyCompilation = false)
+	{
+		if (firstTimeLoadShaders)
+		{
+			// The first time we want to compile the shader and make sure we fail if not succesful
+			return reload(previousShader, filename, entryFunction, true, macros, lazyCompilation);
+		}
+		else
+		{
+			// other time we only want to make the shader dirty to schedule compilation when used
+			(*previousShader)->markDirty();
+			return true;
+		}
+	};
+
+	const bool lazyCompilation = true;
+	success &= reloadShader(&mVertexShader, L"Resources\\TestShader.hlsl", "ColorVertexShader", firstTimeLoadShaders, nullptr, false); // No lazy compilation because it is used to create a layout
+	success &= reload(&mPixelShader, L"Resources\\TestShader.hlsl", "ColorPixelShader", firstTimeLoadShaders, nullptr, lazyCompilation);
+	success &= reload(&mPixelShaderClear, L"Resources\\TestShader.hlsl", "ClearPixelShader", firstTimeLoadShaders, nullptr, lazyCompilation);
+	success &= reload(&mPixelShaderFinal, L"Resources\\TestShader.hlsl", "FinalPixelShader", firstTimeLoadShaders, nullptr, lazyCompilation);
 
 	InputLayoutDesc inputLayout;
 	appendSimpleVertexDataToInputLayout(inputLayout, "POSITION", DXGI_FORMAT_R32G32B32_FLOAT);
@@ -189,14 +205,14 @@ void Game::render()
 		context->IASetInputLayout(mLayout);
 
 		// Set the vertex and pixel shaders that will be used to render this triangle.
-		context->VSSetShader(mVertexShader->mVertexShader, NULL, 0);
+		mVertexShader->setShader(*context);
 
 		// Clear
-		context->PSSetShader(mPixelShaderClear->mPixelShader, NULL, 0);
+		mPixelShaderClear->setShader(*context);
 		context->DrawIndexed(3, 0, 0);
 
 		// Accum
-		context->PSSetShader(mPixelShader->mPixelShader, NULL, 0);
+		mPixelShader->setShader(*context);
 		context->DrawIndexed(12, 0, 0);
 	}
 
@@ -204,14 +220,14 @@ void Game::render()
 		GPU_SCOPED_TIMER(FinalPass, 34, 177, 76);
 
 		// Final view
-		context->PSSetShader(mPixelShaderFinal->mPixelShader, NULL, 0);
+		mPixelShaderFinal->setShader(*context);
 		context->DrawIndexed(3, 0, 0);
 	}
 
 	auto costTest = [&](int loop)
 	{
 		ID3D11DeviceContext* context = g_dx11Device->getDeviceContext();
-		context->PSSetShader(mPixelShaderFinal->mPixelShader, NULL, 0);
+		mPixelShaderFinal->setShader(*context);
 		for (int i = 0; i<loop; ++i)
 			context->DrawIndexed(3, 0, 0);
 	};

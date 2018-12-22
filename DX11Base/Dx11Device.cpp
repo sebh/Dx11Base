@@ -91,8 +91,8 @@ void Dx11Device::internalInitialise(const HWND& hWnd)
 	// By default, set the back buffer as current render target and viewport (no sate tracking for now...)
 	mDevcon->OMSetRenderTargets(1, &mBackBufferRT, NULL); 
 	
-	D3D11_VIEWPORT viewport;
-	ZeroMemory(&viewport, sizeof(D3D11_VIEWPORT));
+	Viewport viewport;
+	ZeroMemory(&viewport, sizeof(Viewport));
 	viewport.TopLeftX = 0;
 	viewport.TopLeftY = 0;
 	viewport.Width = 1280;					// TODO manage that as it is not in sync with  D:\Projects\DX11Intro\dx11Intro\WindowHelper.cpp
@@ -180,7 +180,7 @@ void RenderBuffer::map(D3D11_MAP map, ScopedMappedRenderbuffer& mappedBuffer)
 	// Reset to 0
 	ZeroMemory(&mappedBuffer.mMappedResource, sizeof(D3D11_MAPPED_SUBRESOURCE));
 
-	ID3D11DeviceContext* context = g_dx11Device->getDeviceContext();
+	RenderContext* context = g_dx11Device->getDeviceContext();
 	context->Map(mBuffer, 0, map, 0, &mappedBuffer.mMappedResource);
 	mappedBuffer.mMappedBuffer = mBuffer;
 }
@@ -189,7 +189,7 @@ void RenderBuffer::unmap(ScopedMappedRenderbuffer& mappedBuffer)
 {
 	if (mappedBuffer.mMappedBuffer)
 	{
-		ID3D11DeviceContext* context = g_dx11Device->getDeviceContext();
+		RenderContext* context = g_dx11Device->getDeviceContext();
 		context->Unmap(mappedBuffer.mMappedBuffer, 0);
 		mappedBuffer.mMappedBuffer = nullptr;
 	}
@@ -392,11 +392,11 @@ void Texture2D::initDefault(D3D11_TEXTURE2D_DESC& desc, DXGI_FORMAT format, UINT
 
 
 
-Texture3D::Texture3D(D3D11_TEXTURE3D_DESC& desc) :
+Texture3D::Texture3D(D3D11_TEXTURE3D_DESC& desc, D3D11_SUBRESOURCE_DATA* initialData) :
 	mDesc(desc)
 {
 	ID3D11Device* device = g_dx11Device->getDevice();
-	HRESULT hr = device->CreateTexture3D(&mDesc, nullptr, &mTexture);
+	HRESULT hr = device->CreateTexture3D(&mDesc, initialData, &mTexture);
 	ATLASSERT(hr == S_OK);
 	
 	if (mDesc.BindFlags & D3D11_BIND_SHADER_RESOURCE)
@@ -643,6 +643,20 @@ void BlendState::initPreMultBlendState(D3D11_BLEND_DESC & desc)
 	desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;			// src*0 + dst * (1.0 - srcA)
 	desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
 }
+void BlendState::initPreMultDualBlendState(D3D11_BLEND_DESC & desc)
+{
+	desc = { 0 };
+	desc.AlphaToCoverageEnable = false;
+	desc.IndependentBlendEnable = false;
+	desc.RenderTarget[0].BlendEnable = true;
+	desc.RenderTarget[0].SrcBlend = D3D11_BLEND_ONE;
+	desc.RenderTarget[0].DestBlend = D3D11_BLEND_SRC1_COLOR;
+	desc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;				// src0*1 + dst*src1	, colored transmittance + color
+	desc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ZERO;
+	desc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ONE;
+	desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;			// src*0  + dst*1		, keep alpha intact
+	desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+}
 void BlendState::initAdditiveState(D3D11_BLEND_DESC & desc)
 {
 	desc = { 0 };
@@ -684,22 +698,44 @@ void appendSimpleVertexDataToInputLayout(InputLayoutDesc& inputLayout, const cha
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-ShaderBase::ShaderBase(const TCHAR* filename, const char* entryFunction, const char* profile)
-	: mShaderBuffer(nullptr)
+static ID3D10Blob* compileShader(const TCHAR* filename, const char* entryFunction, const char* profile, const Macros* macros = NULL)
 {
+	ID3D10Blob* shaderBuffer = NULL;
 	ID3DBlob * errorbuffer = NULL;
-
 	const UINT defaultFlags = 0;
+
+#define MAX_SHADER_MACRO 64
+	D3D_SHADER_MACRO shaderMacros[MAX_SHADER_MACRO];
+	shaderMacros[0] = { NULL, NULL };	// in case there is no macros
+	if (macros != NULL)
+	{
+		size_t macrosCount = macros->size();
+		bool validMacroCount = macros->size() <= MAX_SHADER_MACRO-1;	// -1 to handle the null end of list macro
+		ATLASSERT(validMacroCount);
+		if (!validMacroCount)
+		{
+			OutputDebugStringA("\nNumber of macro is too high for shader ");
+			OutputDebugStringW(filename);
+			OutputDebugStringA("\n");
+			return NULL;
+		}
+		for (int m = 0; m < macrosCount; ++m)
+		{
+			const ShaderMacro& sm = macros->at(m);
+			shaderMacros[m] = { sm.Name.c_str() , sm.Definition.c_str() };
+		}
+		shaderMacros[macrosCount] = { NULL, NULL };
+	}
 
 	HRESULT hr = D3DCompileFromFile(
 		filename,							// filename
-		NULL,								// defines
+		shaderMacros,						// defines
 		D3D_COMPILE_STANDARD_FILE_INCLUDE,	// default include handler (includes relative to the compiled file)
 		entryFunction,						// function name
 		profile,							// target profile
 		defaultFlags,						// flag1
 		defaultFlags,						// flag2
-		&mShaderBuffer,						// ouput
+		&shaderBuffer,						// ouput
 		&errorbuffer);						// errors
 
 	if (FAILED(hr))
@@ -711,16 +747,28 @@ ShaderBase::ShaderBase(const TCHAR* filename, const char* entryFunction, const c
 		OutputDebugStringA(", file=");
 		OutputDebugStringW(filename);
 		OutputDebugStringA(" :\n");
-
 		if (errorbuffer)
 		{
 			OutputDebugStringA((char*)errorbuffer->GetBufferPointer());
 			errorbuffer->Release();
 		}
-
-		resetComPtr(&mShaderBuffer);
+		resetComPtr(&shaderBuffer);
 		OutputDebugStringA("\n\n");
+		return NULL;
 	}
+	return shaderBuffer;
+}
+
+ShaderBase::ShaderBase(const TCHAR* filename, const char* entryFunction, const char* profile, const Macros* macros, bool lazyCompilation)
+	: mShaderBuffer(nullptr)
+	, mFilename(filename)
+	, mEntryFunction(entryFunction)
+	, mProfile(profile)
+{
+	if(macros)
+		mMacros = *macros;
+	if(!lazyCompilation)
+		mShaderBuffer = compileShader(mFilename, mEntryFunction, mProfile, macros);
 }
 
 ShaderBase::~ShaderBase()
@@ -728,89 +776,176 @@ ShaderBase::~ShaderBase()
 	resetComPtr(&mShaderBuffer);
 }
 
-VertexShader::VertexShader(const TCHAR* filename, const char* entryFunction)
-	: ShaderBase(filename, entryFunction, "vs_5_0")
+bool ShaderBase::recompileShaderIfNeeded()
+{
+	ID3D10Blob* compiledShaderBuffer;
+	bool newShaderBinaryAvailable = false;
+	if (mDirty && (compiledShaderBuffer = compileShader(mFilename, mEntryFunction, mProfile, &mMacros)))
+	{
+		resetComPtr(&mShaderBuffer);
+		mShaderBuffer = compiledShaderBuffer;
+		newShaderBinaryAvailable = true;
+	}
+	mDirty = false;	// we always remove dirtiness to avoid try to recompile each frame.
+	return newShaderBinaryAvailable;
+}
+
+VertexShader::VertexShader(const TCHAR* filename, const char* entryFunction, const Macros* macros, bool lazyCompilation)
+	: ShaderBase(filename, entryFunction, "vs_5_0", macros, lazyCompilation)
 {
 	if (!compilationSuccessful()) return; // failed compilation
 	ID3D11Device* device = g_dx11Device->getDevice();
 	HRESULT hr = device->CreateVertexShader(mShaderBuffer->GetBufferPointer(), mShaderBuffer->GetBufferSize(), NULL, &mVertexShader);
 	ATLASSERT(hr == S_OK);
+	mDirty = false;
 }
 VertexShader::~VertexShader()
 {
 	resetComPtr(&mVertexShader);
 }
 
-void VertexShader::createInputLayout(InputLayoutDesc inputLayout, ID3D11InputLayout** layout)
+void VertexShader::createInputLayout(InputLayoutDesc inputLayout, InputLayout** layout)
 {
 	ID3D11Device* device = g_dx11Device->getDevice();
 	HRESULT hr = device->CreateInputLayout(inputLayout.data(), UINT(inputLayout.size()), mShaderBuffer->GetBufferPointer(), mShaderBuffer->GetBufferSize(), layout);
 	ATLASSERT(hr == S_OK);
 }
 
-PixelShader::PixelShader(const TCHAR* filename, const char* entryFunction)
-	: ShaderBase(filename, entryFunction, "ps_5_0")
+void VertexShader::setShader(RenderContext& context)
+{
+	if (recompileShaderIfNeeded())
+	{
+		resetComPtr(&mVertexShader);
+		ID3D11Device* device = g_dx11Device->getDevice();
+		HRESULT hr = device->CreateVertexShader(mShaderBuffer->GetBufferPointer(), mShaderBuffer->GetBufferSize(), NULL, &mVertexShader);
+		ATLASSERT(hr == S_OK);
+	}
+	context.VSSetShader(mVertexShader, nullptr, 0);
+}
+
+PixelShader::PixelShader(const TCHAR* filename, const char* entryFunction, const Macros* macros, bool lazyCompilation)
+	: ShaderBase(filename, entryFunction, "ps_5_0", macros, lazyCompilation)
 {
 	if (!compilationSuccessful()) return; // failed compilation
 	ID3D11Device* device = g_dx11Device->getDevice();
 	HRESULT hr = device->CreatePixelShader(mShaderBuffer->GetBufferPointer(), mShaderBuffer->GetBufferSize(), NULL, &mPixelShader);
 	ATLASSERT(hr == S_OK);
+	mDirty = false;
 }
 PixelShader::~PixelShader()
 {
 	resetComPtr(&mPixelShader);
 }
+void PixelShader::setShader(RenderContext& context)
+{
+	if (recompileShaderIfNeeded())
+	{
+		resetComPtr(&mPixelShader);
+		ID3D11Device* device = g_dx11Device->getDevice();
+		HRESULT hr = device->CreatePixelShader(mShaderBuffer->GetBufferPointer(), mShaderBuffer->GetBufferSize(), NULL, &mPixelShader);
+		ATLASSERT(hr == S_OK);
+	}
+	context.PSSetShader(mPixelShader, nullptr, 0);
+}
 
-HullShader::HullShader(const TCHAR* filename, const char* entryFunction)
-	: ShaderBase(filename, entryFunction, "hs_5_0")
+HullShader::HullShader(const TCHAR* filename, const char* entryFunction, const Macros* macros, bool lazyCompilation)
+	: ShaderBase(filename, entryFunction, "hs_5_0", macros, lazyCompilation)
 {
 	if (!compilationSuccessful()) return; // failed compilation
 	ID3D11Device* device = g_dx11Device->getDevice();
 	HRESULT hr = device->CreateHullShader(mShaderBuffer->GetBufferPointer(), mShaderBuffer->GetBufferSize(), NULL, &mHullShader);
 	ATLASSERT(hr == S_OK);
+	mDirty = false;
 }
 HullShader::~HullShader()
 {
 	resetComPtr(&mHullShader);
 }
+void HullShader::setShader(RenderContext& context)
+{
+	if (recompileShaderIfNeeded())
+	{
+		resetComPtr(&mHullShader);
+		ID3D11Device* device = g_dx11Device->getDevice();
+		HRESULT hr = device->CreateHullShader(mShaderBuffer->GetBufferPointer(), mShaderBuffer->GetBufferSize(), NULL, &mHullShader);
+		ATLASSERT(hr == S_OK);
+	}
+	context.HSSetShader(mHullShader, nullptr, 0);
+}
 
-DomainShader::DomainShader(const TCHAR* filename, const char* entryFunction)
-	: ShaderBase(filename, entryFunction, "ds_5_0")
+DomainShader::DomainShader(const TCHAR* filename, const char* entryFunction, const Macros* macros, bool lazyCompilation)
+	: ShaderBase(filename, entryFunction, "ds_5_0", macros, lazyCompilation)
 {
 	if (!compilationSuccessful()) return; // failed compilation
 	ID3D11Device* device = g_dx11Device->getDevice();
 	HRESULT hr = device->CreateDomainShader(mShaderBuffer->GetBufferPointer(), mShaderBuffer->GetBufferSize(), NULL, &mDomainShader);
 	ATLASSERT(hr == S_OK);
+	mDirty = false;
 }
 DomainShader::~DomainShader()
 {
 	resetComPtr(&mDomainShader);
 }
+void DomainShader::setShader(RenderContext& context)
+{
+	if (recompileShaderIfNeeded())
+	{
+		resetComPtr(&mDomainShader);
+		ID3D11Device* device = g_dx11Device->getDevice();
+		HRESULT hr = device->CreateDomainShader(mShaderBuffer->GetBufferPointer(), mShaderBuffer->GetBufferSize(), NULL, &mDomainShader);
+		ATLASSERT(hr == S_OK);
+	}
+	context.DSSetShader(mDomainShader, nullptr, 0);
+}
 
-GeometryShader::GeometryShader(const TCHAR* filename, const char* entryFunction)
-	: ShaderBase(filename, entryFunction, "gs_5_0")
+GeometryShader::GeometryShader(const TCHAR* filename, const char* entryFunction, const Macros* macros, bool lazyCompilation)
+	: ShaderBase(filename, entryFunction, "gs_5_0", macros, lazyCompilation)
 {
 	if (!compilationSuccessful()) return; // failed compilation
 	ID3D11Device* device = g_dx11Device->getDevice();
 	HRESULT hr = device->CreateGeometryShader(mShaderBuffer->GetBufferPointer(), mShaderBuffer->GetBufferSize(), NULL, &mGeometryShader);
 	ATLASSERT(hr == S_OK);
+	mDirty = false;
 }
 GeometryShader::~GeometryShader()
 {
 	resetComPtr(&mGeometryShader);
 }
+void GeometryShader::setShader(RenderContext& context)
+{
+	if (recompileShaderIfNeeded())
+	{
+		resetComPtr(&mGeometryShader);
+		ID3D11Device* device = g_dx11Device->getDevice();
+		HRESULT hr = device->CreateGeometryShader(mShaderBuffer->GetBufferPointer(), mShaderBuffer->GetBufferSize(), NULL, &mGeometryShader);
+		ATLASSERT(hr == S_OK);
+	}
+	context.GSSetShader(mGeometryShader, nullptr, 0);
+}
 
-ComputeShader::ComputeShader(const TCHAR* filename, const char* entryFunction)
-	: ShaderBase(filename, entryFunction, "cs_5_0")
+ComputeShader::ComputeShader(const TCHAR* filename, const char* entryFunction, const Macros* macros, bool lazyCompilation)
+	: ShaderBase(filename, entryFunction, "cs_5_0", macros, lazyCompilation)
 {
 	if (!compilationSuccessful()) return; // failed compilation
 	ID3D11Device* device = g_dx11Device->getDevice();
 	HRESULT hr = device->CreateComputeShader(mShaderBuffer->GetBufferPointer(), mShaderBuffer->GetBufferSize(), NULL, &mComputeShader);
 	ATLASSERT(hr == S_OK);
+	mDirty = false;
 }
 ComputeShader::~ComputeShader()
 {
 	resetComPtr(&mComputeShader);
+}
+void ComputeShader::setShader(RenderContext& context)
+{
+	if (recompileShaderIfNeeded())
+	{
+		resetComPtr(&mComputeShader);
+		ID3D11Device* device = g_dx11Device->getDevice();
+		HRESULT hr = device->CreateComputeShader(mShaderBuffer->GetBufferPointer(), mShaderBuffer->GetBufferSize(), NULL, &mComputeShader);
+		ATLASSERT(hr == S_OK);
+	}
+	context.CSSetShader(mComputeShader, nullptr, 0);
 }
 
 
@@ -882,7 +1017,7 @@ void DxGpuPerformance::startGpuTimer(const char* name, unsigned char r, unsigned
 		timer = (*it).second;
 	}
 
-	ID3D11DeviceContext* context = g_dx11Device->getDeviceContext();
+	RenderContext* context = g_dx11Device->getDeviceContext();
 	context->Begin(timer->mDisjointQueries[mMeasureTimerFrameId]);
 	context->End(timer->mBeginQueries[mMeasureTimerFrameId]);
 
@@ -909,7 +1044,7 @@ void DxGpuPerformance::endGpuTimer(const char* name)
 {
 	DxGpuTimer* timer = mTimers[name];
 
-	ID3D11DeviceContext* context = g_dx11Device->getDeviceContext();
+	RenderContext* context = g_dx11Device->getDeviceContext();
 	context->End(timer->mDisjointQueries[mMeasureTimerFrameId]);
 	context->End(timer->mEndQueries[mMeasureTimerFrameId]);
 	timer->mEnded = true;
@@ -926,7 +1061,7 @@ void DxGpuPerformance::endFrame()
 	{
 		int localReadTimerFrameId = mReadTimerFrameId%V_GPU_TIMER_FRAMECOUNT;
 
-		ID3D11DeviceContext* context = g_dx11Device->getDeviceContext();
+		RenderContext* context = g_dx11Device->getDeviceContext();
 		DxGpuPerformance::GpuTimerMap::iterator it;
 
 		// Get all the data first
@@ -1053,6 +1188,19 @@ void DxGpuPerformance::DxGpuTimer::release()
 		mEndQueries[i]->Release();
 	}
 }
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+int divRoundUp(int numer, int denum)
+{
+	return (numer + denum - 1) / denum;
+}
+
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
