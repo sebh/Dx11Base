@@ -16,7 +16,8 @@ public:
 
 	void showWindow();
 
-	bool processSingleMessage(MSG& msg);
+	bool translateSingleMessage(MSG& msg);
+	void processSingleMessage(MSG& msg);
 
 	const WindowInputData& getInputData()
 	{

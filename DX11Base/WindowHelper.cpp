@@ -267,47 +267,49 @@ void WindowHelper::processKeyMessage(MSG& msg)
 	mInput.mInputEvents.push_back(event);
 }
 
-
-bool WindowHelper::processSingleMessage(MSG& msg)
+bool WindowHelper::translateSingleMessage(MSG& msg)
 {
 	if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
 	{
 		// translate keystroke messages into the right format
 		TranslateMessage(&msg);
 
-		// send the message to the WindowProc function
-		DispatchMessage(&msg);
-
-		switch (msg.message)
-		{
-		case WM_MOUSEMOVE:
-		case WM_LBUTTONDOWN:
-		case WM_RBUTTONDOWN:
-		case WM_MBUTTONDOWN:
-		case WM_LBUTTONUP:
-		case WM_RBUTTONUP:
-		case WM_MBUTTONUP:
-		case WM_LBUTTONDBLCLK:
-		case WM_RBUTTONDBLCLK:
-		case WM_MBUTTONDBLCLK:
-		case WM_NCMOUSELEAVE:
-		case WM_MOUSEWHEEL:
-		case WM_MOUSEHWHEEL:
-			processMouseMessage(msg);
-			break;
-
-		case WM_KEYDOWN:
-		case WM_KEYUP:
-		case WM_CHAR:
-		case WM_SYSCHAR:
-			processKeyMessage(msg);
-			break;
-		}
-
-		// Message processed
+		// Message translated
 		return true;
 	}
 
-	// No mesagge processed
+	// No message translated
 	return false;
+}
+
+void WindowHelper::processSingleMessage(MSG& msg)
+{
+	// send the message to the WindowProc function
+	DispatchMessage(&msg);
+
+	switch (msg.message)
+	{
+	case WM_MOUSEMOVE:
+	case WM_LBUTTONDOWN:
+	case WM_RBUTTONDOWN:
+	case WM_MBUTTONDOWN:
+	case WM_LBUTTONUP:
+	case WM_RBUTTONUP:
+	case WM_MBUTTONUP:
+	case WM_LBUTTONDBLCLK:
+	case WM_RBUTTONDBLCLK:
+	case WM_MBUTTONDBLCLK:
+	case WM_NCMOUSELEAVE:
+	case WM_MOUSEWHEEL:
+	case WM_MOUSEHWHEEL:
+		processMouseMessage(msg);
+		break;
+
+	case WM_KEYDOWN:
+	case WM_KEYUP:
+	case WM_CHAR:
+	case WM_SYSCHAR:
+		processKeyMessage(msg);
+		break;
+	}
 }

@@ -56,9 +56,15 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	MSG msg = { 0 };
 	while (true)
 	{
-		if (win.processSingleMessage(msg))
+		bool msgValid = win.translateSingleMessage(msg);
+
+		if (msgValid)
 		{
-			// A message has been processed
+			// Update imgui
+			ImGui_ImplWin32_WndProcHandler(msg.hwnd, msg.message, msg.wParam, msg.lParam);
+			ImGuiIO& io = ImGui::GetIO();
+			if (!(io.WantCaptureMouse || io.WantCaptureKeyboard))
+				win.processSingleMessage(msg);// A message has been processed and not consumed by imgui
 
 			if (msg.message == WM_KEYDOWN && msg.wParam == VK_ESCAPE)
 				break;// process escape key
@@ -66,8 +72,6 @@ int WINAPI WinMain(HINSTANCE hInstance,
 			if (msg.message == WM_QUIT)
 				break; // time to quit
 
-			// Update imgui
-			ImGui_ImplWin32_WndProcHandler(msg.hwnd, msg.message, msg.wParam, msg.lParam);
 
 			// Take into account window resize
 			if (msg.message == WM_SIZE && g_dx11Device != NULL && msg.wParam != SIZE_MINIMIZED)
@@ -181,7 +185,8 @@ int WINAPI WinMain(HINSTANCE hInstance,
 						= [](const DxGpuPerformance::TimerGraphNode* node, int level) -> void
 					{
 						char* levelOffset = "---------------";	// 16 chars
-						char* levelOffsetPtr = levelOffset + max(0, 16 - 2 * level - 1); // cheap way to add shifting to a printf
+						uint levelShift = 16 - 2 * level - 1;
+						char* levelOffsetPtr = levelOffset + (levelShift<0 ? 0 : levelShift); // cheap way to add shifting to a printf
 
 						char debugStr[128];
 						sprintf_s(debugStr, 128, "%s%s %.3f ms\n", levelOffsetPtr, node->name.c_str(), node->mLastDurationMs);
