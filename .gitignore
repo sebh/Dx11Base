@@ -40,3 +40,10 @@ x64
 
 # Imgui
 imgui.ini
+
+# Visual studio new
+*.ipch
+*.db-shm
+*.db-wal
+
+
