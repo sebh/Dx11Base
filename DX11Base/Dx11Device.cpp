@@ -86,7 +86,7 @@ void Dx11Device::internalInitialise(const HWND& hWnd)
 	ID3D11Texture2D* backBufferTexture;// back buffer texture
 	mSwapchain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&backBufferTexture);
 	mDev->CreateRenderTargetView(backBufferTexture, NULL, &mBackBufferRT);
-	backBufferTexture->Release();
+	resetComPtr(&backBufferTexture);
 
 	// By default, set the back buffer as current render target and viewport (no sate tracking for now...)
 	mDevcon->OMSetRenderTargets(1, &mBackBufferRT, NULL); 
@@ -136,10 +136,10 @@ void Dx11Device::internalInitialise(const HWND& hWnd)
 void Dx11Device::internalShutdown()
 {
 	// close and release all existing COM objects
-	mBackBufferRT->Release();
-	mSwapchain->Release();
-	mDev->Release();
-	mDevcon->Release();
+	resetComPtr(&mBackBufferRT);
+	resetComPtr(&mSwapchain);
+	resetComPtr(&mDev);
+	resetComPtr(&mDevcon);
 }
 
 void Dx11Device::swap(bool vsyncEnabled)
@@ -168,8 +168,7 @@ RenderBuffer::RenderBuffer(D3D11_BUFFER_DESC& bufferDesc, void* initialData) :
 
 RenderBuffer::~RenderBuffer()
 {
-	mBuffer->Release();
-	mBuffer = 0;
+	resetComPtr(&mBuffer);
 }
 
 void RenderBuffer::map(D3D11_MAP map, ScopedMappedRenderbuffer& mappedBuffer)
@@ -337,26 +336,21 @@ Texture2D::~Texture2D()
 {
 	if (mDesc.BindFlags & D3D11_BIND_DEPTH_STENCIL)
 	{
-		mDepthStencilView->Release();
-		mDepthStencilView = 0;
+		resetComPtr(&mDepthStencilView);
 	}
 	if (mDesc.BindFlags & D3D11_BIND_SHADER_RESOURCE)
 	{
-		mShaderResourceView->Release();
-		mShaderResourceView = 0;
+		resetComPtr(&mShaderResourceView);
 	}
 	if (mDesc.BindFlags & D3D11_BIND_UNORDERED_ACCESS)
 	{
-		mUnorderedAccessView->Release();
-		mUnorderedAccessView = 0;
+		resetComPtr(&mUnorderedAccessView);
 	}
 	if (mDesc.BindFlags & D3D11_BIND_RENDER_TARGET)
 	{
-		mRenderTargetView->Release();
-		mRenderTargetView = 0;
+		resetComPtr(&mRenderTargetView);
 	}
-	mTexture->Release();
-	mTexture = 0;
+	resetComPtr(&mTexture);
 }
 void Texture2D::initDepthStencilBuffer(D3D11_TEXTURE2D_DESC& desc, UINT width, UINT height, bool uav)
 {
@@ -443,26 +437,23 @@ Texture3D::~Texture3D()
 {
 	if (mDesc.BindFlags & D3D11_BIND_SHADER_RESOURCE)
 	{
-		mShaderResourceView->Release();
-		mShaderResourceView = 0;
+		resetComPtr(&mShaderResourceView);
 		for (auto view : mShaderResourceViewMips)
 		{
-			view->Release();
+			resetComPtr(&view);
 		}
 		mShaderResourceViewMips.clear();
 	}
 	if (mDesc.BindFlags & D3D11_BIND_UNORDERED_ACCESS)
 	{
-		mUnorderedAccessView->Release();
-		mUnorderedAccessView = 0;
+		resetComPtr(&mUnorderedAccessView);
 		for (auto view : mUnorderedAccessViewMips)
 		{
-			view->Release();
+			resetComPtr(&view);
 		}
 		mUnorderedAccessViewMips.clear();
 	}
-	mTexture->Release();
-	mTexture = 0;
+	resetComPtr(&mTexture);
 }
 void Texture3D::initDefault(D3D11_TEXTURE3D_DESC& desc, DXGI_FORMAT format, UINT width, UINT height, UINT depth, bool uav)
 {
@@ -487,8 +478,7 @@ SamplerState::SamplerState(D3D11_SAMPLER_DESC& desc)
 }
 SamplerState::~SamplerState()
 {
-	mSampler->Release();
-	mSampler = 0;
+	resetComPtr(&mSampler);
 }
 void SamplerState::initLinearClamp(D3D11_SAMPLER_DESC& desc)
 {
@@ -531,8 +521,7 @@ DepthStencilState::DepthStencilState(D3D11_DEPTH_STENCIL_DESC& desc)
 }
 DepthStencilState::~DepthStencilState()
 {
-	mState->Release();
-	mState = 0;
+	resetComPtr(&mState);
 }
 void DepthStencilState::initDefaultDepthOnStencilOff(D3D11_DEPTH_STENCIL_DESC& desc)
 {
@@ -585,8 +574,7 @@ RasterizerState::RasterizerState(D3D11_RASTERIZER_DESC& desc)
 }
 RasterizerState::~RasterizerState()
 {
-	mState->Release();
-	mState = 0;
+	resetComPtr(&mState);
 }
 void RasterizerState::initDefaultState(D3D11_RASTERIZER_DESC& desc)
 {
@@ -612,8 +600,7 @@ BlendState::BlendState(D3D11_BLEND_DESC & desc)
 }
 BlendState::~BlendState()
 {
-	mState->Release();
-	mState = 0;
+	resetComPtr(&mState);
 }
 void BlendState::initDisabledState(D3D11_BLEND_DESC & desc)
 {
@@ -750,7 +737,7 @@ static ID3D10Blob* compileShader(const TCHAR* filename, const char* entryFunctio
 		if (errorbuffer)
 		{
 			OutputDebugStringA((char*)errorbuffer->GetBufferPointer());
-			errorbuffer->Release();
+			resetComPtr(&errorbuffer);
 		}
 		resetComPtr(&shaderBuffer);
 		OutputDebugStringA("\n\n");
@@ -1183,9 +1170,9 @@ void DxGpuPerformance::DxGpuTimer::release()
 	ID3D11Device* device = g_dx11Device->getDevice();
 	for (int i = 0; i < V_GPU_TIMER_FRAMECOUNT; ++i)
 	{
-		mDisjointQueries[i]->Release();
-		mBeginQueries[i]->Release();
-		mEndQueries[i]->Release();
+		resetComPtr(&mDisjointQueries[i]);
+		resetComPtr(&mBeginQueries[i]);
+		resetComPtr(&mEndQueries[i]);
 	}
 }
 
