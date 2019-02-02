@@ -264,20 +264,6 @@ private:
 	SamplerState(SamplerState&);
 };
 
-struct RenderTarget
-{
-	Texture2D* colorTexture = nullptr;
-	Texture2D* depthTexture = nullptr;
-};
-
-inline void deleteRenderTarget(RenderTarget& rt)
-{
-	delete rt.colorTexture;
-	delete rt.depthTexture;
-	rt.colorTexture = nullptr;
-	rt.depthTexture = nullptr;
-}
-
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////
