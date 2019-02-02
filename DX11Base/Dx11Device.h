@@ -248,7 +248,7 @@ public:
 	std::vector<UnorderedAccessView*> mUnorderedAccessViewMips;	// all levels
 private:
 	Texture3D();
-	Texture3D(Texture2D&);
+	Texture3D(Texture3D&);
 };
 
 class SamplerState
