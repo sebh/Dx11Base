@@ -159,6 +159,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Dx11Device.h" />
+    <ClInclude Include="DxMath.h" />
     <ClInclude Include="WindowHelper.h" />
     <ClInclude Include="WindowInput.h" />
   </ItemGroup>

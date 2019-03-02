@@ -28,5 +28,8 @@
     <ClInclude Include="WindowInput.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="DxMath.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

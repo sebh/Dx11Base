@@ -2,7 +2,6 @@
 #include "Game.h"
 
 #include "windows.h"
-#include "DirectXMath.h"
 
 #include <imgui.h>
 
@@ -88,7 +87,7 @@ void Game::initialise()
 	vertices[0]  = { { 0.0f, 0.0f, 0.0f } };
 	vertices[1]  = { { 0.0f, 0.5f, 0.0f } };
 	vertices[2]  = { { 0.5f, 0.0f, 0.0f } };
-	UINT indices[3];
+	uint32 indices[3];
 	indices[0] = 0;
 	indices[1] = 1;
 	indices[2] = 2;
@@ -105,8 +104,8 @@ void Game::initialise()
 
 	mConstantBuffer = new CommonConstantBuffer();
 
-	UINT bufferElementSize = (sizeof(float) * 4);
-	UINT bufferElementCount = 1280 * 720;
+	uint32 bufferElementSize = (sizeof(float) * 4);
+	uint32 bufferElementCount = 1280 * 720;
 	D3D11_BUFFER_DESC someBufferDesc = { bufferElementCount * bufferElementSize , D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS, 0, 0, 0 };
 	mSomeBuffer = new RenderBuffer(someBufferDesc);
 
@@ -229,15 +228,15 @@ void Game::render()
 		context->CSSetConstantBuffers(0, 1, &mConstantBuffer->mBuffer);
 		context->CSSetUnorderedAccessViews(0, 1, &mBackBufferHdr->mUnorderedAccessView, nullptr);
 
-		int sX = divRoundUp(mBackBufferHdr->mDesc.Width, 8);
-		int sY = divRoundUp(mBackBufferHdr->mDesc.Height, 8);
+		int32 sX = divRoundUp(mBackBufferHdr->mDesc.Width, 8);
+		int32 sY = divRoundUp(mBackBufferHdr->mDesc.Height, 8);
 
 		context->Dispatch(sX, sY, 1);
 		g_dx11Device->setNullCsResources(context);
 		g_dx11Device->setNullCsUnorderedAccessViews(context);
 	}
 
-	UINT const uavInitCounts[2] = { -1, -1 };
+	uint32 const uavInitCounts[2] = { -1, -1 };
 	context->OMSetRenderTargetsAndUnorderedAccessViews(1, &mBackBufferHdr->mRenderTargetView, mBackBufferDepth->mDepthStencilView, 0, 0, nullptr, nullptr);
 
 	// Render some triangles using the rasterizer
@@ -245,8 +244,8 @@ void Game::render()
 		GPU_SCOPED_TIMEREVENT(Triangles, 34, 177, 76);
 
 		// Set vertex buffer stride and offset.
-		unsigned int stride = sizeof(VertexType);
-		unsigned int offset = 0;
+		uint32 stride = sizeof(VertexType);
+		uint32 offset = 0;
 		context->IASetVertexBuffers(0, 1, &vertexBuffer->mBuffer, &stride, &offset);
 		context->IASetIndexBuffer(indexBuffer->mBuffer, DXGI_FORMAT_R32_UINT, 0);
 		context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -266,7 +265,7 @@ void Game::render()
 	{
 		GPU_SCOPED_TIMEREVENT(Post, 34, 177, 76);
 
-		const UINT* initialCount = 0;
+		const uint32* initialCount = 0;
 		context->OMSetRenderTargetsAndUnorderedAccessViews(1, &backBuffer, nullptr, 1, 1, &mSomeBufferUavView, initialCount);
 
 		// Set null input assembly and layout

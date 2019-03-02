@@ -13,6 +13,8 @@
 #include <d3d11_1.h>
 #include <d3d11_2.h>
 
+#include "DxMath.h"
+
 // include the Direct3D Library file
 #pragma comment (lib, "d3d11.lib")
 #if DX_DEBUG_EVENT || DX_DEBUG_RESOURCE_NAME
@@ -170,11 +172,11 @@ public:
 
 	// Some basic descriptor initialisation methods
 
-	static void initConstantBufferDesc_dynamic(D3D11_BUFFER_DESC& desc, UINT byteSize);
-	static void initVertexBufferDesc_default(D3D11_BUFFER_DESC& desc, UINT byteSize);
-	static void initIndexBufferDesc_default(D3D11_BUFFER_DESC& desc, UINT byteSize);
-	static void initBufferDesc_default(D3D11_BUFFER_DESC& desc, UINT byteSize);
-	static void initBufferDesc_uav(D3D11_BUFFER_DESC& desc, UINT byteSize);
+	static void initConstantBufferDesc_dynamic(D3D11_BUFFER_DESC& desc, uint32 byteSize);
+	static void initVertexBufferDesc_default(D3D11_BUFFER_DESC& desc, uint32 byteSize);
+	static void initIndexBufferDesc_default(D3D11_BUFFER_DESC& desc, uint32 byteSize);
+	static void initBufferDesc_default(D3D11_BUFFER_DESC& desc, uint32 byteSize);
+	static void initBufferDesc_uav(D3D11_BUFFER_DESC& desc, uint32 byteSize);
 
 public:///////////////////////////////////protected:
 	D3D11_BUFFER_DESC mDesc;
@@ -221,8 +223,8 @@ class Texture2D
 public:
 	Texture2D(D3D11_TEXTURE2D_DESC& desc, D3D11_SUBRESOURCE_DATA* initialData = nullptr);
 	virtual ~Texture2D();
-	static void initDepthStencilBuffer(D3D11_TEXTURE2D_DESC& desc, UINT width, UINT height, bool uav);
-	static void initDefault(D3D11_TEXTURE2D_DESC& desc, DXGI_FORMAT format, UINT width, UINT height, bool renderTarget, bool uav);
+	static void initDepthStencilBuffer(D3D11_TEXTURE2D_DESC& desc, uint32 width, uint32 height, bool uav);
+	static void initDefault(D3D11_TEXTURE2D_DESC& desc, DXGI_FORMAT format, uint32 width, uint32 height, bool renderTarget, bool uav);
 	D3D11_TEXTURE2D_DESC mDesc;
 	ID3D11Texture2D* mTexture = nullptr;
 	DepthStencilView* mDepthStencilView = nullptr;
@@ -239,7 +241,7 @@ class Texture3D
 public:
 	Texture3D(D3D11_TEXTURE3D_DESC& desc, D3D11_SUBRESOURCE_DATA* initialData = nullptr);
 	virtual ~Texture3D();
-	static void initDefault(D3D11_TEXTURE3D_DESC& desc, DXGI_FORMAT format, UINT width, UINT height, UINT depth, bool uav);
+	static void initDefault(D3D11_TEXTURE3D_DESC& desc, DXGI_FORMAT format, uint32 width, uint32 height, uint32 depth, bool uav);
 	D3D11_TEXTURE3D_DESC mDesc;
 	ID3D11Texture3D* mTexture = nullptr;
 	ShaderResourceView* mShaderResourceView = nullptr;			// level 0
@@ -509,9 +511,9 @@ private:
 
 	typedef std::map<std::string, DxGpuTimer*> GpuTimerMap;
 	static GpuTimerMap mTimers;			///! All the timers mapped using their name
-	static int mMeasureTimerFrameId;	///! Last measured frame (appended timer to command buffer)
-	static int mReadTimerFrameId;		///! Last frame we read the timer values from the api
-	static int mLastReadTimerFrameId;	///! Last frame we read the timers and they are still valid for debug print on screen (data from previous finished frame)
+	static int32 mMeasureTimerFrameId;	///! Last measured frame (appended timer to command buffer)
+	static int32 mReadTimerFrameId;		///! Last frame we read the timer values from the api
+	static int32 mLastReadTimerFrameId;	///! Last frame we read the timers and they are still valid for debug print on screen (data from previous finished frame)
 
 	// Double buffer so that we can display the previous frame timers while the current frame is being processed
 	static GpuTimerGraph mTimerGraphs[V_GPU_TIMER_FRAMECOUNT];	///! Timer graphs of the last frames
@@ -520,9 +522,9 @@ private:
 	// Basically, node object are not in container as this can result in invalid/stale pointer when reallocated. Instead we allocate in static arrays
 	// and container point to the static array. With such an approach, all pointers will remain valid over the desired lifetime (several frames).
 	static DxGpuTimer mTimerArray[V_TIMER_MAX_COUNT];
-	static int mAllocatedTimers;
+	static int32 mAllocatedTimers;
 	static TimerGraphNode mTimerGraphNodeArray[V_GPU_TIMER_FRAMECOUNT][V_TIMER_MAX_COUNT];
-	static int mAllocatedTimerGraphNodes[V_GPU_TIMER_FRAMECOUNT];
+	static int32 mAllocatedTimerGraphNodes[V_GPU_TIMER_FRAMECOUNT];
 };
 
 struct ScopedGpuTimer
@@ -609,6 +611,6 @@ bool reload(type** previousShader, const TCHAR* filename, const char* entryFunct
 
 
 
-int divRoundUp(int numer, int denum);
+int32 divRoundUp(int32 numer, int32 denum);
 
 

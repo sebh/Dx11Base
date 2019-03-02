@@ -4,16 +4,6 @@
 #include "Dx11Base/Dx11Device.h"
 
 
-// TODO put in its own file CustomDirectXMath file
-#include "DirectXMath.h"
-using namespace DirectX;
-typedef XMMATRIX float4x4;
-typedef XMVECTOR Vector4;
-typedef XMFLOAT4 float4;
-typedef XMFLOAT3 float3;
-#define CLAMP(x, x0, x1) (x < x0 ? x0 : (x > x1 ? x1 : x))
-
-
 
 class Game
 {

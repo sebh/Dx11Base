@@ -51,7 +51,7 @@ void Dx11Device::internalInitialise(const HWND& hWnd)
 	scd.SampleDesc.Count = 1;                               // multisample
 	scd.Windowed = TRUE;                                    // windowed/full-screen mode
 
-	const UINT requestedFeatureLevelsCount = 3;
+	const uint32 requestedFeatureLevelsCount = 3;
 	const D3D_FEATURE_LEVEL requestedFeatureLevels[requestedFeatureLevelsCount] =
 	{
 		D3D_FEATURE_LEVEL_12_1,         // Always ask for 12.1 feature level if available
@@ -194,23 +194,23 @@ void RenderBuffer::unmap(ScopedMappedRenderbuffer& mappedBuffer)
 	}
 }
 
-void RenderBuffer::initConstantBufferDesc_dynamic(D3D11_BUFFER_DESC& desc, UINT byteSize)
+void RenderBuffer::initConstantBufferDesc_dynamic(D3D11_BUFFER_DESC& desc, uint32 byteSize)
 {
 	desc = { byteSize , D3D11_USAGE_DYNAMIC, D3D11_BIND_CONSTANT_BUFFER, D3D11_CPU_ACCESS_WRITE, 0, 0 };
 }
-void RenderBuffer::initVertexBufferDesc_default(D3D11_BUFFER_DESC& desc, UINT byteSize)
+void RenderBuffer::initVertexBufferDesc_default(D3D11_BUFFER_DESC& desc, uint32 byteSize)
 {
 	desc = { byteSize , D3D11_USAGE_DEFAULT, D3D11_BIND_VERTEX_BUFFER, 0, 0, 0 };
 }
-void RenderBuffer::initIndexBufferDesc_default(D3D11_BUFFER_DESC& desc, UINT byteSize)
+void RenderBuffer::initIndexBufferDesc_default(D3D11_BUFFER_DESC& desc, uint32 byteSize)
 {
 	desc = { byteSize , D3D11_USAGE_DEFAULT, D3D11_BIND_INDEX_BUFFER, 0, 0, 0 };
 }
-void RenderBuffer::initBufferDesc_default(D3D11_BUFFER_DESC& desc, UINT byteSize)
+void RenderBuffer::initBufferDesc_default(D3D11_BUFFER_DESC& desc, uint32 byteSize)
 {
 	desc = { byteSize , D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE, 0, 0, 0 };
 }
-void RenderBuffer::initBufferDesc_uav(D3D11_BUFFER_DESC& desc, UINT byteSize)
+void RenderBuffer::initBufferDesc_uav(D3D11_BUFFER_DESC& desc, uint32 byteSize)
 {
 	desc = { byteSize , D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS, 0, 0, 0 };
 }
@@ -352,7 +352,7 @@ Texture2D::~Texture2D()
 	}
 	resetComPtr(&mTexture);
 }
-void Texture2D::initDepthStencilBuffer(D3D11_TEXTURE2D_DESC& desc, UINT width, UINT height, bool uav)
+void Texture2D::initDepthStencilBuffer(D3D11_TEXTURE2D_DESC& desc, uint32 width, uint32 height, bool uav)
 {
 	desc.Width = width;
 	desc.Height = height;
@@ -367,7 +367,7 @@ void Texture2D::initDepthStencilBuffer(D3D11_TEXTURE2D_DESC& desc, UINT width, U
 	desc.MiscFlags = 0;
 }
 
-void Texture2D::initDefault(D3D11_TEXTURE2D_DESC& desc, DXGI_FORMAT format, UINT width, UINT height, bool renderTarget, bool uav)
+void Texture2D::initDefault(D3D11_TEXTURE2D_DESC& desc, DXGI_FORMAT format, uint32 width, uint32 height, bool renderTarget, bool uav)
 {
 	desc.Width = width;
 	desc.Height = height;
@@ -401,7 +401,7 @@ Texture3D::Texture3D(D3D11_TEXTURE3D_DESC& desc, D3D11_SUBRESOURCE_DATA* initial
 		ATLASSERT(hr == S_OK);
 		if (desc.MipLevels > 1)
 		{
-			for (UINT l = 0; l < desc.MipLevels; ++l)
+			for (uint32 l = 0; l < desc.MipLevels; ++l)
 			{
 				shaderResourceViewDesc.Texture3D.MostDetailedMip = l;
 				shaderResourceViewDesc.Texture3D.MipLevels = 1;
@@ -421,7 +421,7 @@ Texture3D::Texture3D(D3D11_TEXTURE3D_DESC& desc, D3D11_SUBRESOURCE_DATA* initial
 		ATLASSERT(hr == S_OK);
 		if (desc.MipLevels > 1)
 		{
-			for (UINT l = 0; l < desc.MipLevels; ++l)
+			for (uint32 l = 0; l < desc.MipLevels; ++l)
 			{
 				unorderedAccessViewDesc.Texture3D.MipSlice = l;
 
@@ -455,7 +455,7 @@ Texture3D::~Texture3D()
 	}
 	resetComPtr(&mTexture);
 }
-void Texture3D::initDefault(D3D11_TEXTURE3D_DESC& desc, DXGI_FORMAT format, UINT width, UINT height, UINT depth, bool uav)
+void Texture3D::initDefault(D3D11_TEXTURE3D_DESC& desc, DXGI_FORMAT format, uint32 width, uint32 height, uint32 depth, bool uav)
 {
 	desc.Width = width;
 	desc.Height = height;
@@ -689,7 +689,7 @@ static ID3D10Blob* compileShader(const TCHAR* filename, const char* entryFunctio
 {
 	ID3D10Blob* shaderBuffer = NULL;
 	ID3DBlob * errorbuffer = NULL;
-	const UINT defaultFlags = 0;
+	const uint32 defaultFlags = 0;
 
 #define MAX_SHADER_MACRO 64
 	D3D_SHADER_MACRO shaderMacros[MAX_SHADER_MACRO];
@@ -706,7 +706,7 @@ static ID3D10Blob* compileShader(const TCHAR* filename, const char* entryFunctio
 			OutputDebugStringA("\n");
 			return NULL;
 		}
-		for (int m = 0; m < macrosCount; ++m)
+		for (int32 m = 0; m < macrosCount; ++m)
 		{
 			const ShaderMacro& sm = macros->at(m);
 			shaderMacros[m] = { sm.Name.c_str() , sm.Definition.c_str() };
@@ -794,7 +794,7 @@ VertexShader::~VertexShader()
 void VertexShader::createInputLayout(InputLayoutDesc inputLayout, InputLayout** layout)
 {
 	ID3D11Device* device = g_dx11Device->getDevice();
-	HRESULT hr = device->CreateInputLayout(inputLayout.data(), UINT(inputLayout.size()), mShaderBuffer->GetBufferPointer(), mShaderBuffer->GetBufferSize(), layout);
+	HRESULT hr = device->CreateInputLayout(inputLayout.data(), uint32(inputLayout.size()), mShaderBuffer->GetBufferPointer(), mShaderBuffer->GetBufferSize(), layout);
 	ATLASSERT(hr == S_OK);
 }
 
@@ -942,15 +942,15 @@ void ComputeShader::setShader(RenderContext& context)
 
 // static members
 DxGpuPerformance::GpuTimerMap DxGpuPerformance::mTimers;
-int DxGpuPerformance::mMeasureTimerFrameId;
-int DxGpuPerformance::mReadTimerFrameId;
-int DxGpuPerformance::mLastReadTimerFrameId;
+int32 DxGpuPerformance::mMeasureTimerFrameId;
+int32 DxGpuPerformance::mReadTimerFrameId;
+int32 DxGpuPerformance::mLastReadTimerFrameId;
 
 DxGpuPerformance::DxGpuTimer DxGpuPerformance::mTimerArray[V_TIMER_MAX_COUNT];
-int DxGpuPerformance::mAllocatedTimers;
+int32 DxGpuPerformance::mAllocatedTimers;
 
 DxGpuPerformance::TimerGraphNode DxGpuPerformance::mTimerGraphNodeArray[V_GPU_TIMER_FRAMECOUNT][V_TIMER_MAX_COUNT];
-int DxGpuPerformance::mAllocatedTimerGraphNodes[V_GPU_TIMER_FRAMECOUNT];
+int32 DxGpuPerformance::mAllocatedTimerGraphNodes[V_GPU_TIMER_FRAMECOUNT];
 
 DxGpuPerformance::GpuTimerGraph DxGpuPerformance::mTimerGraphs[V_GPU_TIMER_FRAMECOUNT];
 DxGpuPerformance::TimerGraphNode* DxGpuPerformance::mCurrentTimeGraph = nullptr;
@@ -966,7 +966,7 @@ void DxGpuPerformance::initialise()
 }
 void DxGpuPerformance::shutdown()
 {
-	for (int i = 0; i < mAllocatedTimers; ++i)
+	for (int32 i = 0; i < mAllocatedTimers; ++i)
 		mTimerArray[i].release();
 	mTimers.clear();
 }
@@ -974,7 +974,7 @@ void DxGpuPerformance::shutdown()
 void DxGpuPerformance::startFrame()
 {
 	// Clear the frame we are going to measure and append root timer node
-	for (int i = 0, cnt = mAllocatedTimerGraphNodes[mMeasureTimerFrameId]; i < cnt; ++i)
+	for (int32 i = 0, cnt = mAllocatedTimerGraphNodes[mMeasureTimerFrameId]; i < cnt; ++i)
 		mTimerGraphNodeArray[mMeasureTimerFrameId][i].subGraph.clear();
 	mAllocatedTimerGraphNodes[mMeasureTimerFrameId] = 0; // reset the counter
 	TimerGraphNode* root = &mTimerGraphNodeArray [mMeasureTimerFrameId] [mAllocatedTimerGraphNodes[mMeasureTimerFrameId]++];
@@ -1046,7 +1046,7 @@ void DxGpuPerformance::endFrame()
 	// Fetch data from ready timer
 	if (mReadTimerFrameId >= 0)
 	{
-		int localReadTimerFrameId = mReadTimerFrameId%V_GPU_TIMER_FRAMECOUNT;
+		int32 localReadTimerFrameId = mReadTimerFrameId%V_GPU_TIMER_FRAMECOUNT;
 
 		RenderContext* context = g_dx11Device->getDeviceContext();
 		DxGpuPerformance::GpuTimerMap::iterator it;
@@ -1158,7 +1158,7 @@ void DxGpuPerformance::DxGpuTimer::initialize()
 	D3D11_QUERY_DESC disjointQueryDesc;
 	disjointQueryDesc.Query = D3D11_QUERY_TIMESTAMP_DISJOINT;
 	disjointQueryDesc.MiscFlags = 0;
-	for (int i = 0; i < V_GPU_TIMER_FRAMECOUNT; ++i)
+	for (int32 i = 0; i < V_GPU_TIMER_FRAMECOUNT; ++i)
 	{
 		device->CreateQuery(&disjointQueryDesc, &mDisjointQueries[i]);
 		device->CreateQuery(&queryDesc, &mBeginQueries[i]);
@@ -1168,7 +1168,7 @@ void DxGpuPerformance::DxGpuTimer::initialize()
 void DxGpuPerformance::DxGpuTimer::release()
 {
 	ID3D11Device* device = g_dx11Device->getDevice();
-	for (int i = 0; i < V_GPU_TIMER_FRAMECOUNT; ++i)
+	for (int32 i = 0; i < V_GPU_TIMER_FRAMECOUNT; ++i)
 	{
 		resetComPtr(&mDisjointQueries[i]);
 		resetComPtr(&mBeginQueries[i]);
@@ -1183,7 +1183,7 @@ void DxGpuPerformance::DxGpuTimer::release()
 
 
 
-int divRoundUp(int numer, int denum)
+int32 divRoundUp(int32 numer, int32 denum)
 {
 	return (numer + denum - 1) / denum;
 }
