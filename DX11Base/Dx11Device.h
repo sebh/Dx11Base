@@ -103,10 +103,10 @@ private:
 	void internalShutdown();
 
 	IDXGISwapChain*							mSwapchain;				// the pointer to the swap chain interface
-	ID3D11Device*							mDev;					// the pointer to our Direct3D device interface
-	D3dRenderContext*							mDevcon;				// the pointer to our Direct3D device context
+	D3dDevice*								mDev;					// the pointer to our Direct3D device interface
+	D3dRenderContext*						mDevcon;				// the pointer to our Direct3D device context
 
-	D3dRenderTargetView*						mBackBufferRT;			// back buffer render target
+	D3dRenderTargetView*					mBackBufferRT;			// back buffer render target
 };
 
 extern Dx11Device* g_dx11Device;
