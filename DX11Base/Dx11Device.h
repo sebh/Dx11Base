@@ -21,14 +21,31 @@
 	#pragma comment( lib, "dxguid.lib")	// For debug name guid
 #endif
 
-typedef ID3D11Device DeviceD3d;
-typedef ID3D11DeviceContext RenderContext;
-typedef ID3D11InputLayout InputLayout;
-typedef D3D11_VIEWPORT Viewport;
-typedef ID3D11ShaderResourceView ShaderResourceView;
-typedef ID3D11UnorderedAccessView UnorderedAccessView;
-typedef ID3D11RenderTargetView RenderTargetView;
-typedef ID3D11DepthStencilView DepthStencilView;
+
+typedef ID3D11Device						DeviceD3d;
+typedef ID3D11DeviceContext					RenderContext;
+
+typedef ID3D11InputLayout					InputLayout;
+typedef D3D11_INPUT_ELEMENT_DESC			InputElementDesc;
+typedef D3D11_VIEWPORT						Viewport;
+
+typedef ID3D11ShaderResourceView			ShaderResourceView;
+typedef D3D11_UNORDERED_ACCESS_VIEW_DESC	UnorderedAccessViewDesc;
+typedef ID3D11UnorderedAccessView			UnorderedAccessView;
+typedef ID3D11RenderTargetView				RenderTargetView;
+typedef ID3D11DepthStencilView				DepthStencilView;
+
+typedef D3D11_BUFFER_DESC					BufferDesc;
+typedef D3D11_TEXTURE2D_DESC				Texture2dDesc;
+typedef D3D11_TEXTURE3D_DESC				Texture3dDesc;
+typedef D3D11_SUBRESOURCE_DATA				SubResourceData;
+typedef D3D11_SAMPLER_DESC					SamplerDesc;
+
+typedef D3D11_DEPTH_STENCIL_DESC			DepthStencilDesc;
+typedef D3D11_RASTERIZER_DESC				RasterizerDesc;
+typedef D3D11_BLEND_DESC					BlendDesc;
+
+
 
 class Dx11Device
 {
@@ -146,7 +163,7 @@ class RenderBuffer
 {
 public:
 
-	RenderBuffer(D3D11_BUFFER_DESC& mBufferDesc, void* initialData=nullptr);
+	RenderBuffer(BufferDesc& mBufferDesc, void* initialData=nullptr);
 	virtual ~RenderBuffer();
 
 
@@ -172,14 +189,14 @@ public:
 
 	// Some basic descriptor initialisation methods
 
-	static void initConstantBufferDesc_dynamic(D3D11_BUFFER_DESC& desc, uint32 byteSize);
-	static void initVertexBufferDesc_default(D3D11_BUFFER_DESC& desc, uint32 byteSize);
-	static void initIndexBufferDesc_default(D3D11_BUFFER_DESC& desc, uint32 byteSize);
-	static void initBufferDesc_default(D3D11_BUFFER_DESC& desc, uint32 byteSize);
-	static void initBufferDesc_uav(D3D11_BUFFER_DESC& desc, uint32 byteSize);
+	static void initConstantBufferDesc_dynamic(BufferDesc& desc, uint32 byteSize);
+	static void initVertexBufferDesc_default(BufferDesc& desc, uint32 byteSize);
+	static void initIndexBufferDesc_default(BufferDesc& desc, uint32 byteSize);
+	static void initBufferDesc_default(BufferDesc& desc, uint32 byteSize);
+	static void initBufferDesc_uav(BufferDesc& desc, uint32 byteSize);
 
 public:///////////////////////////////////protected:
-	D3D11_BUFFER_DESC mDesc;
+	BufferDesc mDesc;
 	ID3D11Buffer* mBuffer;
 
 private:
@@ -204,10 +221,10 @@ public:
 	}
 private:
 
-	static D3D11_BUFFER_DESC getDesc()
+	static BufferDesc getDesc()
 	{
 		ATLASSERT(sizeof(T) % 16 == 0);
-		D3D11_BUFFER_DESC desc;
+		BufferDesc desc;
 		RenderBuffer::initConstantBufferDesc_dynamic(desc, sizeof(T));
 		return desc;
 	}
@@ -221,11 +238,11 @@ private:
 class Texture2D
 {
 public:
-	Texture2D(D3D11_TEXTURE2D_DESC& desc, D3D11_SUBRESOURCE_DATA* initialData = nullptr);
+	Texture2D(Texture2dDesc& desc, SubResourceData* initialData = nullptr);
 	virtual ~Texture2D();
-	static void initDepthStencilBuffer(D3D11_TEXTURE2D_DESC& desc, uint32 width, uint32 height, bool uav);
-	static void initDefault(D3D11_TEXTURE2D_DESC& desc, DXGI_FORMAT format, uint32 width, uint32 height, bool renderTarget, bool uav);
-	D3D11_TEXTURE2D_DESC mDesc;
+	static void initDepthStencilBuffer(Texture2dDesc& desc, uint32 width, uint32 height, bool uav);
+	static void initDefault(Texture2dDesc& desc, DXGI_FORMAT format, uint32 width, uint32 height, bool renderTarget, bool uav);
+	Texture2dDesc mDesc;
 	ID3D11Texture2D* mTexture = nullptr;
 	DepthStencilView* mDepthStencilView = nullptr;
 	RenderTargetView* mRenderTargetView = nullptr;
@@ -239,10 +256,10 @@ private:
 class Texture3D
 {
 public:
-	Texture3D(D3D11_TEXTURE3D_DESC& desc, D3D11_SUBRESOURCE_DATA* initialData = nullptr);
+	Texture3D(Texture3dDesc& desc, SubResourceData* initialData = nullptr);
 	virtual ~Texture3D();
-	static void initDefault(D3D11_TEXTURE3D_DESC& desc, DXGI_FORMAT format, uint32 width, uint32 height, uint32 depth, bool uav);
-	D3D11_TEXTURE3D_DESC mDesc;
+	static void initDefault(Texture3dDesc& desc, DXGI_FORMAT format, uint32 width, uint32 height, uint32 depth, bool uav);
+	Texture3dDesc mDesc;
 	ID3D11Texture3D* mTexture = nullptr;
 	ShaderResourceView* mShaderResourceView = nullptr;			// level 0
 	UnorderedAccessView* mUnorderedAccessView = nullptr;			// level 0
@@ -256,10 +273,10 @@ private:
 class SamplerState
 {
 public:
-	SamplerState(D3D11_SAMPLER_DESC& desc);
+	SamplerState(SamplerDesc& desc);
 	virtual ~SamplerState();
-	static void initLinearClamp(D3D11_SAMPLER_DESC& desc);
-	static void initShadowCmpClamp(D3D11_SAMPLER_DESC& desc);
+	static void initLinearClamp(SamplerDesc& desc);
+	static void initShadowCmpClamp(SamplerDesc& desc);
 	ID3D11SamplerState* mSampler = nullptr;
 private:
 	SamplerState();
@@ -275,10 +292,10 @@ private:
 class DepthStencilState
 {
 public:
-	DepthStencilState(D3D11_DEPTH_STENCIL_DESC& desc);
+	DepthStencilState(DepthStencilDesc& desc);
 	virtual ~DepthStencilState();
-	static void initDefaultDepthOnStencilOff(D3D11_DEPTH_STENCIL_DESC& desc);
-	static void initDepthNoWriteStencilOff(D3D11_DEPTH_STENCIL_DESC& desc);
+	static void initDefaultDepthOnStencilOff(DepthStencilDesc& desc);
+	static void initDepthNoWriteStencilOff(DepthStencilDesc& desc);
 	ID3D11DepthStencilState* mState;
 private:
 	DepthStencilState();
@@ -288,9 +305,9 @@ private:
 class RasterizerState
 {
 public:
-	RasterizerState(D3D11_RASTERIZER_DESC& desc);
+	RasterizerState(RasterizerDesc& desc);
 	virtual ~RasterizerState();
-	static void initDefaultState(D3D11_RASTERIZER_DESC& desc);
+	static void initDefaultState(RasterizerDesc& desc);
 	ID3D11RasterizerState* mState;
 private:
 	RasterizerState();
@@ -300,12 +317,12 @@ private:
 class BlendState
 {
 public:
-	BlendState(D3D11_BLEND_DESC & desc);
+	BlendState(BlendDesc & desc);
 	virtual ~BlendState();
-	static void initDisabledState(D3D11_BLEND_DESC & desc);
-	static void initPreMultBlendState(D3D11_BLEND_DESC & desc);
-	static void initPreMultDualBlendState(D3D11_BLEND_DESC & desc);
-	static void initAdditiveState(D3D11_BLEND_DESC & desc);
+	static void initDisabledState(BlendDesc & desc);
+	static void initPreMultBlendState(BlendDesc & desc);
+	static void initPreMultDualBlendState(BlendDesc & desc);
+	static void initAdditiveState(BlendDesc & desc);
 	ID3D11BlendState* mState;
 private:
 	BlendState();
@@ -318,7 +335,7 @@ private:
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-typedef std::vector<D3D11_INPUT_ELEMENT_DESC> InputLayoutDesc;
+typedef std::vector<InputElementDesc> InputLayoutDesc;
 
 // Append a simple per vertex data layout input 
 void appendSimpleVertexDataToInputLayout(InputLayoutDesc& inputLayout, const char* semanticName, DXGI_FORMAT format);

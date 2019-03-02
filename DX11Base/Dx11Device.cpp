@@ -152,12 +152,12 @@ void Dx11Device::swap(bool vsyncEnabled)
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-RenderBuffer::RenderBuffer(D3D11_BUFFER_DESC& bufferDesc, void* initialData) :
+RenderBuffer::RenderBuffer(BufferDesc& bufferDesc, void* initialData) :
 	mDesc(bufferDesc)
 {
 	ID3D11Device* device = g_dx11Device->getDevice();
 
-	D3D11_SUBRESOURCE_DATA data;
+	SubResourceData data;
 	data.pSysMem = initialData;
 	data.SysMemPitch = 0;
 	data.SysMemSlicePitch = 0;
@@ -194,23 +194,23 @@ void RenderBuffer::unmap(ScopedMappedRenderbuffer& mappedBuffer)
 	}
 }
 
-void RenderBuffer::initConstantBufferDesc_dynamic(D3D11_BUFFER_DESC& desc, uint32 byteSize)
+void RenderBuffer::initConstantBufferDesc_dynamic(BufferDesc& desc, uint32 byteSize)
 {
 	desc = { byteSize , D3D11_USAGE_DYNAMIC, D3D11_BIND_CONSTANT_BUFFER, D3D11_CPU_ACCESS_WRITE, 0, 0 };
 }
-void RenderBuffer::initVertexBufferDesc_default(D3D11_BUFFER_DESC& desc, uint32 byteSize)
+void RenderBuffer::initVertexBufferDesc_default(BufferDesc& desc, uint32 byteSize)
 {
 	desc = { byteSize , D3D11_USAGE_DEFAULT, D3D11_BIND_VERTEX_BUFFER, 0, 0, 0 };
 }
-void RenderBuffer::initIndexBufferDesc_default(D3D11_BUFFER_DESC& desc, uint32 byteSize)
+void RenderBuffer::initIndexBufferDesc_default(BufferDesc& desc, uint32 byteSize)
 {
 	desc = { byteSize , D3D11_USAGE_DEFAULT, D3D11_BIND_INDEX_BUFFER, 0, 0, 0 };
 }
-void RenderBuffer::initBufferDesc_default(D3D11_BUFFER_DESC& desc, uint32 byteSize)
+void RenderBuffer::initBufferDesc_default(BufferDesc& desc, uint32 byteSize)
 {
 	desc = { byteSize , D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE, 0, 0, 0 };
 }
-void RenderBuffer::initBufferDesc_uav(D3D11_BUFFER_DESC& desc, uint32 byteSize)
+void RenderBuffer::initBufferDesc_uav(BufferDesc& desc, uint32 byteSize)
 {
 	desc = { byteSize , D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS, 0, 0, 0 };
 }
@@ -290,7 +290,7 @@ bool isFormatTypeless(DXGI_FORMAT format)
 	return false;
 }
 
-Texture2D::Texture2D(D3D11_TEXTURE2D_DESC& desc, D3D11_SUBRESOURCE_DATA* initialData) :
+Texture2D::Texture2D(Texture2dDesc& desc, SubResourceData* initialData) :
 	mDesc(desc)
 {
 	ID3D11Device* device = g_dx11Device->getDevice();
@@ -352,7 +352,7 @@ Texture2D::~Texture2D()
 	}
 	resetComPtr(&mTexture);
 }
-void Texture2D::initDepthStencilBuffer(D3D11_TEXTURE2D_DESC& desc, uint32 width, uint32 height, bool uav)
+void Texture2D::initDepthStencilBuffer(Texture2dDesc& desc, uint32 width, uint32 height, bool uav)
 {
 	desc.Width = width;
 	desc.Height = height;
@@ -367,7 +367,7 @@ void Texture2D::initDepthStencilBuffer(D3D11_TEXTURE2D_DESC& desc, uint32 width,
 	desc.MiscFlags = 0;
 }
 
-void Texture2D::initDefault(D3D11_TEXTURE2D_DESC& desc, DXGI_FORMAT format, uint32 width, uint32 height, bool renderTarget, bool uav)
+void Texture2D::initDefault(Texture2dDesc& desc, DXGI_FORMAT format, uint32 width, uint32 height, bool renderTarget, bool uav)
 {
 	desc.Width = width;
 	desc.Height = height;
@@ -386,7 +386,7 @@ void Texture2D::initDefault(D3D11_TEXTURE2D_DESC& desc, DXGI_FORMAT format, uint
 
 
 
-Texture3D::Texture3D(D3D11_TEXTURE3D_DESC& desc, D3D11_SUBRESOURCE_DATA* initialData) :
+Texture3D::Texture3D(Texture3dDesc& desc, SubResourceData* initialData) :
 	mDesc(desc)
 {
 	ID3D11Device* device = g_dx11Device->getDevice();
@@ -455,7 +455,7 @@ Texture3D::~Texture3D()
 	}
 	resetComPtr(&mTexture);
 }
-void Texture3D::initDefault(D3D11_TEXTURE3D_DESC& desc, DXGI_FORMAT format, uint32 width, uint32 height, uint32 depth, bool uav)
+void Texture3D::initDefault(Texture3dDesc& desc, DXGI_FORMAT format, uint32 width, uint32 height, uint32 depth, bool uav)
 {
 	desc.Width = width;
 	desc.Height = height;
@@ -470,7 +470,7 @@ void Texture3D::initDefault(D3D11_TEXTURE3D_DESC& desc, DXGI_FORMAT format, uint
 
 
 
-SamplerState::SamplerState(D3D11_SAMPLER_DESC& desc)
+SamplerState::SamplerState(SamplerDesc& desc)
 {
 	ID3D11Device* device = g_dx11Device->getDevice();
 	HRESULT hr = device->CreateSamplerState(&desc, &mSampler);
@@ -480,7 +480,7 @@ SamplerState::~SamplerState()
 {
 	resetComPtr(&mSampler);
 }
-void SamplerState::initLinearClamp(D3D11_SAMPLER_DESC& desc)
+void SamplerState::initLinearClamp(SamplerDesc& desc)
 {
 	desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
 	desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
@@ -493,7 +493,7 @@ void SamplerState::initLinearClamp(D3D11_SAMPLER_DESC& desc)
 	desc.MinLOD = -FLT_MAX;
 	desc.MaxLOD = FLT_MAX;
 }
-void SamplerState::initShadowCmpClamp(D3D11_SAMPLER_DESC& desc)
+void SamplerState::initShadowCmpClamp(SamplerDesc& desc)
 {
 	desc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
 	desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
@@ -513,7 +513,7 @@ void SamplerState::initShadowCmpClamp(D3D11_SAMPLER_DESC& desc)
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-DepthStencilState::DepthStencilState(D3D11_DEPTH_STENCIL_DESC& desc)
+DepthStencilState::DepthStencilState(DepthStencilDesc& desc)
 {
 	ID3D11Device* device = g_dx11Device->getDevice();
 	HRESULT hr = device->CreateDepthStencilState(&desc, &mState);
@@ -523,7 +523,7 @@ DepthStencilState::~DepthStencilState()
 {
 	resetComPtr(&mState);
 }
-void DepthStencilState::initDefaultDepthOnStencilOff(D3D11_DEPTH_STENCIL_DESC& desc)
+void DepthStencilState::initDefaultDepthOnStencilOff(DepthStencilDesc& desc)
 {
 	// Depth test parameters
 	desc.DepthEnable = true;
@@ -544,7 +544,7 @@ void DepthStencilState::initDefaultDepthOnStencilOff(D3D11_DEPTH_STENCIL_DESC& d
 	desc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
 	desc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
 }
-void DepthStencilState::initDepthNoWriteStencilOff(D3D11_DEPTH_STENCIL_DESC& desc)
+void DepthStencilState::initDepthNoWriteStencilOff(DepthStencilDesc& desc)
 {
 	// Depth test parameters
 	desc.DepthEnable = true;
@@ -566,7 +566,7 @@ void DepthStencilState::initDepthNoWriteStencilOff(D3D11_DEPTH_STENCIL_DESC& des
 	desc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
 }
 
-RasterizerState::RasterizerState(D3D11_RASTERIZER_DESC& desc)
+RasterizerState::RasterizerState(RasterizerDesc& desc)
 {
 	ID3D11Device* device = g_dx11Device->getDevice();
 	HRESULT hr = device->CreateRasterizerState(&desc, &mState);
@@ -576,9 +576,9 @@ RasterizerState::~RasterizerState()
 {
 	resetComPtr(&mState);
 }
-void RasterizerState::initDefaultState(D3D11_RASTERIZER_DESC& desc)
+void RasterizerState::initDefaultState(RasterizerDesc& desc)
 {
-	ZeroMemory(&desc, sizeof(D3D11_RASTERIZER_DESC));
+	ZeroMemory(&desc, sizeof(RasterizerDesc));
 	desc.AntialiasedLineEnable = FALSE;
 	desc.CullMode = D3D11_CULL_BACK;
 	desc.DepthBias = 0;
@@ -592,7 +592,7 @@ void RasterizerState::initDefaultState(D3D11_RASTERIZER_DESC& desc)
 }
 
 
-BlendState::BlendState(D3D11_BLEND_DESC & desc)
+BlendState::BlendState(BlendDesc & desc)
 {
 	ID3D11Device* device = g_dx11Device->getDevice();
 	HRESULT hr = device->CreateBlendState(&desc, &mState);
@@ -602,7 +602,7 @@ BlendState::~BlendState()
 {
 	resetComPtr(&mState);
 }
-void BlendState::initDisabledState(D3D11_BLEND_DESC & desc)
+void BlendState::initDisabledState(BlendDesc & desc)
 {
 	desc = { 0 };
 	desc.AlphaToCoverageEnable = false;
@@ -616,7 +616,7 @@ void BlendState::initDisabledState(D3D11_BLEND_DESC & desc)
 	desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
 	desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
 }
-void BlendState::initPreMultBlendState(D3D11_BLEND_DESC & desc)
+void BlendState::initPreMultBlendState(BlendDesc & desc)
 {
 	desc = { 0 };
 	desc.AlphaToCoverageEnable = false;
@@ -630,7 +630,7 @@ void BlendState::initPreMultBlendState(D3D11_BLEND_DESC & desc)
 	desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;			// src*0 + dst * (1.0 - srcA)
 	desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
 }
-void BlendState::initPreMultDualBlendState(D3D11_BLEND_DESC & desc)
+void BlendState::initPreMultDualBlendState(BlendDesc & desc)
 {
 	desc = { 0 };
 	desc.AlphaToCoverageEnable = false;
@@ -644,7 +644,7 @@ void BlendState::initPreMultDualBlendState(D3D11_BLEND_DESC & desc)
 	desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;			// src*0  + dst*1		, keep alpha intact
 	desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
 }
-void BlendState::initAdditiveState(D3D11_BLEND_DESC & desc)
+void BlendState::initAdditiveState(BlendDesc & desc)
 {
 	desc = { 0 };
 	desc.AlphaToCoverageEnable = false;
@@ -667,7 +667,7 @@ void BlendState::initAdditiveState(D3D11_BLEND_DESC & desc)
 
 void appendSimpleVertexDataToInputLayout(InputLayoutDesc& inputLayout, const char* semanticName, DXGI_FORMAT format)
 {
-	D3D11_INPUT_ELEMENT_DESC desc;
+	InputElementDesc desc;
 
 	desc.SemanticName = semanticName;
 	desc.SemanticIndex = 0;
