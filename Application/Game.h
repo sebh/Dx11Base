@@ -3,6 +3,18 @@
 #include "Dx11Base/WindowInput.h"
 #include "Dx11Base/Dx11Device.h"
 
+
+// TODO put in its own file CustomDirectXMath file
+#include "DirectXMath.h"
+using namespace DirectX;
+typedef XMMATRIX float4x4;
+typedef XMVECTOR Vector4;
+typedef XMFLOAT4 float4;
+typedef XMFLOAT3 float3;
+#define CLAMP(x, x0, x1) (x < x0 ? x0 : (x > x1 ? x1 : x))
+
+
+
 class Game
 {
 public:
@@ -23,7 +35,11 @@ private:
 	/// release all shaders
 	void releaseShaders();
 
-	// hack for testing
+	// Test vertex buffer
+	struct VertexType
+	{
+		float position[3];
+	};
 	RenderBuffer* vertexBuffer;
 	RenderBuffer* indexBuffer;
 
@@ -31,31 +47,36 @@ private:
 	// Testing some GPU buffers and shaders 
 	//
 
-	struct ConstantBufferStructureExemple
+	struct CommonConstantBufferStructure
 	{
-		float f;
-		int i;
-		uint u;
-		float f2;
+		float4x4 gViewProjMat;
+
+		float4 gColor;
+
+		unsigned int gResolution[2];
+		unsigned int pad;
 	};
-	typedef ConstantBuffer<ConstantBufferStructureExemple> MyConstantBuffer;
-	MyConstantBuffer* mConstantBuffer;
+	typedef ConstantBuffer<CommonConstantBufferStructure> CommonConstantBuffer;
+	CommonConstantBuffer* mConstantBuffer;
 
 	RenderBuffer* mSomeBuffer;
 	ID3D11UnorderedAccessView* mSomeBufferUavView;
 
+	DepthStencilState* mDefaultDepthStencilState;
+	BlendState* mDefaultBlendState;
+	RasterizerState* mDefaultRasterizerState;
+
 	VertexShader* mVertexShader;
-	PixelShader*  mPixelShader;
-	PixelShader*  mPixelShaderClear;
-	PixelShader*  mPixelShaderFinal;
+	VertexShader* mScreenVertexShader;
+	PixelShader*  mColoredTrianglesShader;
+	ComputeShader*mToyShader;
+	PixelShader*  mPostProcessShader;
 
 	ID3D11InputLayout* mLayout;
 
-	struct VertexType
-	{
-		float position[3];
-		float color[4];
-	};
+	Texture2D* mBackBufferHdr;
+	Texture2D* mBackBufferDepth;
+
 };
 
 

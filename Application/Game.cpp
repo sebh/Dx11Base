@@ -37,25 +37,39 @@ void Game::loadShaders(bool firstTimeLoadShaders)
 	};
 
 	const bool lazyCompilation = true;
-	success &= reloadShader(&mVertexShader, L"Resources\\TestShader.hlsl", "ColorVertexShader", firstTimeLoadShaders, nullptr, false); // No lazy compilation because it is used to create a layout
-	success &= reload(&mPixelShader, L"Resources\\TestShader.hlsl", "ColorPixelShader", firstTimeLoadShaders, nullptr, lazyCompilation);
-	success &= reload(&mPixelShaderClear, L"Resources\\TestShader.hlsl", "ClearPixelShader", firstTimeLoadShaders, nullptr, lazyCompilation);
-	success &= reload(&mPixelShaderFinal, L"Resources\\TestShader.hlsl", "FinalPixelShader", firstTimeLoadShaders, nullptr, lazyCompilation);
+	success &= reloadShader(&mVertexShader, L"Resources\\Common.hlsl", "DefaultVertexShader", firstTimeLoadShaders, nullptr, false);				// No lazy compilation because it is used to create a layout
+	success &= reloadShader(&mScreenVertexShader, L"Resources\\Common.hlsl", "ScreenTriangleVertexShader", firstTimeLoadShaders, nullptr, false);	// No lazy compilation because it is used to create a layout
+	success &= reload(&mColoredTrianglesShader, L"Resources\\ColoredTriangles.hlsl", "ColoredTrianglesPixelShader", firstTimeLoadShaders, nullptr, lazyCompilation);
+	success &= reload(&mToyShader, L"Resources\\ToyShader.hlsl", "ToyShaderCS", firstTimeLoadShaders, nullptr, lazyCompilation);
+	success &= reload(&mPostProcessShader, L"Resources\\PostProcess.hlsl", "PostProcessPS", firstTimeLoadShaders, nullptr, lazyCompilation);
 
 	InputLayoutDesc inputLayout;
 	appendSimpleVertexDataToInputLayout(inputLayout, "POSITION", DXGI_FORMAT_R32G32B32_FLOAT);
-	appendSimpleVertexDataToInputLayout(inputLayout, "COLOR", DXGI_FORMAT_R32G32B32A32_FLOAT);
 	resetComPtr(&mLayout);
 	mVertexShader->createInputLayout(inputLayout, &mLayout);	// Have a layout object with vertex stride in it
+
+	D3D11_TEXTURE2D_DESC backBufferDepthDesc;
+	Texture2D::initDepthStencilBuffer(backBufferDepthDesc, 1280, 720, false);
+	mBackBufferDepth = new Texture2D(backBufferDepthDesc);
+
+	D3D11_TEXTURE2D_DESC backBufferHdrDesc;
+	Texture2D::initDefault(backBufferHdrDesc, DXGI_FORMAT_R32G32B32A32_FLOAT, 1280, 720, true, true); // using high precision for Monte Carlo integration
+	mBackBufferHdr = new Texture2D(backBufferHdrDesc);
 }
 
 void Game::releaseShaders()
 {
-	resetPtr(&mPixelShader);
-	resetPtr(&mPixelShaderClear);
-	resetPtr(&mPixelShaderFinal);
-	resetPtr(&mVertexShader);
 	resetComPtr(&mLayout);
+
+	resetPtr(&mVertexShader);
+	resetPtr(&mScreenVertexShader);
+
+	resetPtr(&mColoredTrianglesShader);
+	resetPtr(&mToyShader);
+	resetPtr(&mPostProcessShader);
+
+	resetPtr(&mBackBufferHdr);
+	resetPtr(&mBackBufferDepth);
 }
 
 
@@ -71,32 +85,14 @@ void Game::initialise()
 	//ID3D11DeviceContext* context = g_dx11Device->getDeviceContext();
 
 	// Simple triangle geometry
-	VertexType vertices[12];
-	vertices[0] = { { -10.0f, -1.0f, 0.0f },{ 1.0f, 0.0f, 0.0f, 1.0f } };
-	vertices[1] = { { 10.0f,  10.0f, 0.0f },{ 0.0f, 1.0f, 0.0f, 1.0f } };
-	vertices[2] = { { 10.0f, -1.0f, 0.0f },{ 0.0f, 0.0f, 1.0f, 1.0f } };
-	vertices[3] = { { -10.0f, -1.0f, 0.0f },{ 1.0f, 0.0f, 0.0f, 1.0f } };
-	vertices[4] = { { 10.0f,  10.0f, 0.0f },{ 0.0f, 1.0f, 0.0f, 1.0f } };
-	vertices[5] = { { 10.0f, -1.0f, 0.0f },{ 0.0f, 0.0f, 1.0f, 1.0f } };
-	vertices[6] = { { -10.0f, -1.0f, 0.0f },{ 1.0f, 0.0f, 0.0f, 1.0f } };
-	vertices[7] = { { 10.0f,  10.0f, 0.0f },{ 0.0f, 1.0f, 0.0f, 1.0f } };
-	vertices[8] = { { 10.0f, -1.0f, 0.0f },{ 0.0f, 0.0f, 1.0f, 1.0f } };
-	vertices[9] = { { -10.0f, -1.0f, 0.0f },{ 1.0f, 0.0f, 0.0f, 1.0f } };
-	vertices[10] = { { 10.0f,  10.0f, 0.0f },{ 0.0f, 1.0f, 0.0f, 1.0f } };
-	vertices[11] = { { 10.0f, -1.0f, 0.0f },{ 0.0f, 0.0f, 1.0f, 1.0f } };
-	UINT indices[12];
+	VertexType vertices[3];
+	vertices[0]  = { { 0.0f, 0.0f, 0.0f } };
+	vertices[1]  = { { 0.0f, 0.5f, 0.0f } };
+	vertices[2]  = { { 0.5f, 0.0f, 0.0f } };
+	UINT indices[3];
 	indices[0] = 0;
 	indices[1] = 1;
 	indices[2] = 2;
-	indices[3] = 3;
-	indices[4] = 4;
-	indices[5] = 5;
-	indices[6] = 6;
-	indices[7] = 7;
-	indices[8] = 8;
-	indices[9] = 9;
-	indices[10] = 10;
-	indices[11] = 11;
 
 
 	// Create 
@@ -108,7 +104,7 @@ void Game::initialise()
 	RenderBuffer::initIndexBufferDesc_default(indexBufferDesc, sizeof(indices));
 	indexBuffer = new RenderBuffer(indexBufferDesc, indices);
 
-	mConstantBuffer = new MyConstantBuffer();
+	mConstantBuffer = new CommonConstantBuffer();
 
 	UINT bufferElementSize = (sizeof(float) * 4);
 	UINT bufferElementCount = 1280 * 720;
@@ -116,25 +112,41 @@ void Game::initialise()
 	mSomeBuffer = new RenderBuffer(someBufferDesc);
 
 	D3D11_UNORDERED_ACCESS_VIEW_DESC someBufferUavViewDesc;
-	someBufferUavViewDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+	someBufferUavViewDesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
 	someBufferUavViewDesc.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
 	someBufferUavViewDesc.Buffer.FirstElement = 0;
 	someBufferUavViewDesc.Buffer.NumElements = bufferElementCount;
 	someBufferUavViewDesc.Buffer.Flags = 0; // D3D11_BUFFER_UAV_FLAG_RAW
 	HRESULT hr = device->CreateUnorderedAccessView(mSomeBuffer->mBuffer, &someBufferUavViewDesc, &mSomeBufferUavView);
 	ATLASSERT(hr == S_OK);
+
+	D3D11_DEPTH_STENCIL_DESC depthStencilState;
+	DepthStencilState::initDefaultDepthOnStencilOff(depthStencilState);
+	mDefaultDepthStencilState = new DepthStencilState(depthStencilState);
+
+	D3D11_RASTERIZER_DESC rasterDesc;
+	RasterizerState::initDefaultState(rasterDesc);
+	mDefaultRasterizerState = new RasterizerState(rasterDesc);
+
+	D3D11_BLEND_DESC blendDesc;
+	BlendState::initDisabledState(blendDesc);
+	mDefaultBlendState = new BlendState(blendDesc);
 }
 
 void Game::shutdown()
 {
 	////////// Release resources
 
-	delete mConstantBuffer;
-	delete indexBuffer;
-	delete vertexBuffer;
+	resetPtr(&mConstantBuffer);
+	resetPtr(&indexBuffer);
+	resetPtr(&vertexBuffer);
 
-	mSomeBufferUavView->Release();
-	delete mSomeBuffer;
+	resetComPtr(&mSomeBufferUavView);
+	resetPtr(&mSomeBuffer);
+
+	resetPtr(&mDefaultDepthStencilState);
+	resetPtr(&mDefaultBlendState);
+	resetPtr(&mDefaultRasterizerState);
 
 	////////// Release shaders
 
@@ -170,171 +182,108 @@ void Game::render()
 	ID3D11DeviceContext* context = g_dx11Device->getDeviceContext();
 	ID3D11RenderTargetView* backBuffer = g_dx11Device->getBackBufferRT();
 
-	// Constant buffer test
-	{	
-		ConstantBufferStructureExemple cb;
-		cb.f = 1.0f;
-		cb.f2= 2.0f;
-		cb.i = -1;
-		cb.u = 2;
+	// Constant buffer update
+	{
+		XMMATRIX viewMatrix = XMMatrixIdentity();
+		XMMATRIX projMatrix = XMMatrixOrthographicLH(1.0, 1.0, -1.0, 1.0);
+		XMMATRIX mViewProjMat = XMMatrixMultiply(viewMatrix, projMatrix);
+
+		CommonConstantBufferStructure cb;
+		cb.gViewProjMat = mViewProjMat;
+		cb.gColor = { 0.0, 1.0, 1.0, 1.0 };
+		cb.gResolution[0] = 1280;
+		cb.gResolution[1] = 720;
 		mConstantBuffer->update(cb);
 	}
 
+	// Set default state
+	{
+		context->OMSetDepthStencilState(mDefaultDepthStencilState->mState, 0);
+		context->OMSetBlendState(mDefaultBlendState->mState, nullptr, 0xffffffff);
+		context->RSSetState(mDefaultRasterizerState->mState);
+
+		Viewport viewport;
+		ZeroMemory(&viewport, sizeof(Viewport));
+		viewport.TopLeftX = 0;
+		viewport.TopLeftY = 0;
+		viewport.Width = 1280;					// TODO manage that as it is not in sync with  D:\Projects\DX11Intro\dx11Intro\WindowHelper.cpp
+		viewport.Height = 720;
+		viewport.MinDepth = 0.0f;
+		viewport.MaxDepth = 1.0f;
+		context->RSSetViewports(1, &viewport);
+	}
+
+	// Clear the HDR back buffer
 	{
 		GPU_SCOPED_TIMER(Clear, 34, 177, 76);
 
-		// Clear the back buffer
 		D3DCOLORVALUE clearColor = { 0.1f, 0.2f, 0.4f, 1.0f };
-		context->ClearRenderTargetView(backBuffer, &clearColor.r);
-
-		const UINT* initialCount = 0;
-		context->OMSetRenderTargetsAndUnorderedAccessViews(1, &backBuffer, nullptr, 1, 1, &mSomeBufferUavView, initialCount);
+		context->ClearRenderTargetView(mBackBufferHdr->mRenderTargetView, &clearColor.r);
+		context->ClearDepthStencilView(mBackBufferDepth->mDepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);;
 	}
 
+	// Render a shader toy using compute
 	{
-		GPU_SCOPED_TIMER(Iterate, 34, 177, 76);
+		GPU_SCOPED_TIMEREVENT(ShaderToy, 34, 177, 76);
+
+		mToyShader->setShader(*context);
+		context->CSSetConstantBuffers(0, 1, &mConstantBuffer->mBuffer);
+		context->CSSetUnorderedAccessViews(0, 1, &mBackBufferHdr->mUnorderedAccessView, nullptr);
+
+		int sX = divRoundUp(mBackBufferHdr->mDesc.Width, 8);
+		int sY = divRoundUp(mBackBufferHdr->mDesc.Height, 8);
+
+		context->Dispatch(sX, sY, 1);
+		g_dx11Device->setNullCsResources(context);
+		g_dx11Device->setNullCsUnorderedAccessViews(context);
+	}
+
+	UINT const uavInitCounts[2] = { -1, -1 };
+	context->OMSetRenderTargetsAndUnorderedAccessViews(1, &mBackBufferHdr->mRenderTargetView, mBackBufferDepth->mDepthStencilView, 0, 0, nullptr, nullptr);
+
+	// Render some triangles using the rasterizer
+	{
+		GPU_SCOPED_TIMEREVENT(Triangles, 34, 177, 76);
 
 		// Set vertex buffer stride and offset.
 		unsigned int stride = sizeof(VertexType);
 		unsigned int offset = 0;
-
 		context->IASetVertexBuffers(0, 1, &vertexBuffer->mBuffer, &stride, &offset);
 		context->IASetIndexBuffer(indexBuffer->mBuffer, DXGI_FORMAT_R32_UINT, 0);
 		context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		// Set the vertex input layout.
 		context->IASetInputLayout(mLayout);
 
-		// Set the vertex and pixel shaders that will be used to render this triangle.
+		// Final view
 		mVertexShader->setShader(*context);
+		mColoredTrianglesShader->setShader(*context);
+		context->VSSetConstantBuffers(0, 1, &mConstantBuffer->mBuffer);
+		context->PSSetConstantBuffers(0, 1, &mConstantBuffer->mBuffer);
 
-		// Clear
-		mPixelShaderClear->setShader(*context);
 		context->DrawIndexed(3, 0, 0);
-
-		// Accum
-		mPixelShader->setShader(*context);
-		context->DrawIndexed(12, 0, 0);
 	}
 
+	// Post process into the back buffer using a pixel shader
 	{
-		GPU_SCOPED_TIMER(FinalPass, 34, 177, 76);
+		GPU_SCOPED_TIMEREVENT(Post, 34, 177, 76);
+
+		const UINT* initialCount = 0;
+		context->OMSetRenderTargetsAndUnorderedAccessViews(1, &backBuffer, nullptr, 1, 1, &mSomeBufferUavView, initialCount);
+
+		// Set null input assembly and layout
+		context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		context->IASetInputLayout(nullptr);
 
 		// Final view
-		mPixelShaderFinal->setShader(*context);
-		context->DrawIndexed(3, 0, 0);
-	}
+		mScreenVertexShader->setShader(*context);
+		mPostProcessShader->setShader(*context);
+		context->VSSetConstantBuffers(0, 1, &mConstantBuffer->mBuffer);
+		context->PSSetConstantBuffers(0, 1, &mConstantBuffer->mBuffer);
 
-	auto costTest = [&](int loop)
-	{
-		ID3D11DeviceContext* context = g_dx11Device->getDeviceContext();
-		mPixelShaderFinal->setShader(*context);
-		for (int i = 0; i<loop; ++i)
-			context->DrawIndexed(3, 0, 0);
-	};
+		context->PSSetShaderResources(0, 1, &mBackBufferHdr->mShaderResourceView);
 
-	{
-		GPU_SCOPED_TIMER(Shadow, 128, 128, 255);
-		{
-			GPU_SCOPED_TIMER(ShadowCasc0, 64, 64, 255);
-			{
-				GPU_SCOPED_TIMER(Shadow0, 64, 0, 255);
-				costTest(4);
-			}
-			{
-				GPU_SCOPED_TIMER(PartShad0, 0, 64, 255);
-				costTest(2);
-			}
-		}
-		{
-			GPU_SCOPED_TIMER(ShadowCasc1, 64, 64, 255);
-			{
-				GPU_SCOPED_TIMER(Shadow1, 64, 0, 255);
-				costTest(5);
-			}
-			{
-				GPU_SCOPED_TIMER(PartShad1, 0, 64, 255);
-				costTest(2);
-			}
-		}
-		{
-			GPU_SCOPED_TIMER(ShadowCasc2, 64, 64, 255);
-			{
-				GPU_SCOPED_TIMER(Shadow2, 64, 0, 255);
-				costTest(6);
-			}
-			{
-				GPU_SCOPED_TIMER(PartShad2, 0, 64, 255);
-				costTest(1);
-			}
-		}
-		{
-			GPU_SCOPED_TIMER(ShadowCasc3, 64, 64, 255);
-			{
-				GPU_SCOPED_TIMER(Shadow3, 64, 0, 255);
-				costTest(7);
-			}
-			{
-				GPU_SCOPED_TIMER(PartShad3, 0, 64, 255);
-				costTest(1);
-			}
-		}
-	}
-
-	{
-		GPU_SCOPED_TIMER(GBuffer, 255, 128, 128);
-		{
-			{
-				GPU_SCOPED_TIMER(GbClear, 255, 64, 0);
-				costTest(1);
-			}
-			{
-				GPU_SCOPED_TIMER(GbRender, 255, 0, 64);
-				costTest(15);
-			}
-		}
-	}
-	{
-		GPU_SCOPED_TIMER(Volumetric, 100, 200, 100);
-		{
-			{
-				GPU_SCOPED_TIMER(MaterialVoxelisation, 50, 200, 50);
-				costTest(10);
-			}
-			{
-				GPU_SCOPED_TIMER(LuminanceVoxelisation, 50, 200, 0);
-				costTest(15);
-			}
-			{
-				GPU_SCOPED_TIMER(FroxelIntegration, 0, 200, 50);
-				costTest(7);
-			}
-		}
-	}
-	{
-		GPU_SCOPED_TIMER(Lighting, 240, 201, 14);
-		{
-			{
-				GPU_SCOPED_TIMER(TiledLighting, 128, 100, 7);
-				costTest(12);
-			}
-			{
-				GPU_SCOPED_TIMER(SkyAndMedia, 64, 50, 4);
-				costTest(6);
-			}
-		}
-	}
-	{
-		GPU_SCOPED_TIMER(Post, 200, 200, 0);
-		{
-			{
-				GPU_SCOPED_TIMER(TAA, 128, 128, 0);
-				costTest(2);
-			}
-			{
-				GPU_SCOPED_TIMER(Tone, 64, 64, 0);
-				costTest(2);
-			}
-		}
+		context->Draw(3, 0);
+		g_dx11Device->setNullPsResources(context);
 	}
 }
 

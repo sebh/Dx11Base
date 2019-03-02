@@ -72,7 +72,16 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="..\Resources\TestShader.hlsl">
+    <FxCompile Include="..\Resources\Common.hlsl">
+      <Filter>HLSL</Filter>
+    </FxCompile>
+    <FxCompile Include="..\Resources\PostProcess.hlsl">
+      <Filter>HLSL</Filter>
+    </FxCompile>
+    <FxCompile Include="..\Resources\ColoredTriangles.hlsl">
+      <Filter>HLSL</Filter>
+    </FxCompile>
+    <FxCompile Include="..\Resources\ToyShader.hlsl">
       <Filter>HLSL</Filter>
     </FxCompile>
   </ItemGroup>
