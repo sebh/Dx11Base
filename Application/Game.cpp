@@ -47,13 +47,9 @@ void Game::loadShaders(bool firstTimeLoadShaders)
 	resetComPtr(&mLayout);
 	mVertexShader->createInputLayout(inputLayout, &mLayout);	// Have a layout object with vertex stride in it
 
-	D3dTexture2dDesc backBufferDepthDesc;
-	Texture2D::initDepthStencilBuffer(backBufferDepthDesc, 1280, 720, false);
-	mBackBufferDepth = new Texture2D(backBufferDepthDesc);
+	mBackBufferDepth = new Texture2D(Texture2D::initDepthStencilBuffer(1280, 720, false));
 
-	D3dTexture2dDesc backBufferHdrDesc;
-	Texture2D::initDefault(backBufferHdrDesc, DXGI_FORMAT_R32G32B32A32_FLOAT, 1280, 720, true, true); // using high precision for Monte Carlo integration
-	mBackBufferHdr = new Texture2D(backBufferHdrDesc);
+	mBackBufferHdr = new Texture2D(Texture2D::initDefault(DXGI_FORMAT_R32G32B32A32_FLOAT, 1280, 720, true, true));
 }
 
 void Game::releaseShaders()
@@ -94,13 +90,9 @@ void Game::initialise()
 
 
 	// Create 
-	D3dBufferDesc vertexBufferDesc;
-	RenderBuffer::initVertexBufferDesc_default(vertexBufferDesc, sizeof(vertices));
-	vertexBuffer = new RenderBuffer(vertexBufferDesc, vertices);
+	vertexBuffer = new RenderBuffer(RenderBuffer::initVertexBufferDesc_default(sizeof(vertices)), vertices);
 
-	D3dBufferDesc indexBufferDesc;
-	RenderBuffer::initIndexBufferDesc_default(indexBufferDesc, sizeof(indices));
-	indexBuffer = new RenderBuffer(indexBufferDesc, indices);
+	indexBuffer = new RenderBuffer(RenderBuffer::initIndexBufferDesc_default(sizeof(indices)), indices);
 
 	mConstantBuffer = new CommonConstantBuffer();
 
@@ -118,17 +110,9 @@ void Game::initialise()
 	HRESULT hr = device->CreateUnorderedAccessView(mSomeBuffer->mBuffer, &someBufferUavViewDesc, &mSomeBufferUavView);
 	ATLASSERT(hr == S_OK);
 
-	D3dDepthStencilDesc depthStencilState;
-	DepthStencilState::initDefaultDepthOnStencilOff(depthStencilState);
-	mDefaultDepthStencilState = new DepthStencilState(depthStencilState);
-
-	D3dRasterizerDesc rasterDesc;
-	RasterizerState::initDefaultState(rasterDesc);
-	mDefaultRasterizerState = new RasterizerState(rasterDesc);
-
-	D3dBlendDesc blendDesc;
-	BlendState::initDisabledState(blendDesc);
-	mDefaultBlendState = new BlendState(blendDesc);
+	mDefaultDepthStencilState = new DepthStencilState(DepthStencilState::initDefaultDepthOnStencilOff());
+	mDefaultRasterizerState = new RasterizerState(RasterizerState::initDefaultState());
+	mDefaultBlendState = new BlendState(BlendState::initDisabledState());
 }
 
 void Game::shutdown()

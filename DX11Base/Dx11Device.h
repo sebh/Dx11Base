@@ -189,11 +189,11 @@ public:
 
 	// Some basic descriptor initialisation methods
 
-	static void initConstantBufferDesc_dynamic(D3dBufferDesc& desc, uint32 byteSize);
-	static void initVertexBufferDesc_default(D3dBufferDesc& desc, uint32 byteSize);
-	static void initIndexBufferDesc_default(D3dBufferDesc& desc, uint32 byteSize);
-	static void initBufferDesc_default(D3dBufferDesc& desc, uint32 byteSize);
-	static void initBufferDesc_uav(D3dBufferDesc& desc, uint32 byteSize);
+	static D3dBufferDesc initConstantBufferDesc_dynamic(uint32 byteSize);
+	static D3dBufferDesc initVertexBufferDesc_default(uint32 byteSize);
+	static D3dBufferDesc initIndexBufferDesc_default(uint32 byteSize);
+	static D3dBufferDesc initBufferDesc_default(uint32 byteSize);
+	static D3dBufferDesc initBufferDesc_uav(uint32 byteSize);
 
 public:///////////////////////////////////protected:
 	D3dBufferDesc mDesc;
@@ -224,9 +224,7 @@ private:
 	static D3dBufferDesc getDesc()
 	{
 		ATLASSERT(sizeof(T) % 16 == 0);
-		D3dBufferDesc desc;
-		RenderBuffer::initConstantBufferDesc_dynamic(desc, sizeof(T));
-		return desc;
+		return initConstantBufferDesc_dynamic(sizeof(T));
 	}
 };
 
@@ -240,8 +238,8 @@ class Texture2D
 public:
 	Texture2D(D3dTexture2dDesc& desc, D3dSubResourceData* initialData = nullptr);
 	virtual ~Texture2D();
-	static void initDepthStencilBuffer(D3dTexture2dDesc& desc, uint32 width, uint32 height, bool uav);
-	static void initDefault(D3dTexture2dDesc& desc, DXGI_FORMAT format, uint32 width, uint32 height, bool renderTarget, bool uav);
+	static D3dTexture2dDesc initDepthStencilBuffer(uint32 width, uint32 height, bool uav);
+	static D3dTexture2dDesc initDefault(DXGI_FORMAT format, uint32 width, uint32 height, bool renderTarget, bool uav);
 	D3dTexture2dDesc mDesc;
 	ID3D11Texture2D* mTexture = nullptr;
 	D3dDepthStencilView* mDepthStencilView = nullptr;
@@ -258,7 +256,7 @@ class Texture3D
 public:
 	Texture3D(D3dTexture3dDesc& desc, D3dSubResourceData* initialData = nullptr);
 	virtual ~Texture3D();
-	static void initDefault(D3dTexture3dDesc& desc, DXGI_FORMAT format, uint32 width, uint32 height, uint32 depth, bool uav);
+	static D3dTexture3dDesc initDefault(DXGI_FORMAT format, uint32 width, uint32 height, uint32 depth, bool uav);
 	D3dTexture3dDesc mDesc;
 	ID3D11Texture3D* mTexture = nullptr;
 	D3dShaderResourceView* mShaderResourceView = nullptr;			// level 0
@@ -275,8 +273,8 @@ class SamplerState
 public:
 	SamplerState(D3dSamplerDesc& desc);
 	virtual ~SamplerState();
-	static void initLinearClamp(D3dSamplerDesc& desc);
-	static void initShadowCmpClamp(D3dSamplerDesc& desc);
+	static D3dSamplerDesc initLinearClamp();
+	static D3dSamplerDesc initShadowCmpClamp();
 	ID3D11SamplerState* mSampler = nullptr;
 private:
 	SamplerState();
@@ -294,8 +292,8 @@ class DepthStencilState
 public:
 	DepthStencilState(D3dDepthStencilDesc& desc);
 	virtual ~DepthStencilState();
-	static void initDefaultDepthOnStencilOff(D3dDepthStencilDesc& desc);
-	static void initDepthNoWriteStencilOff(D3dDepthStencilDesc& desc);
+	static D3dDepthStencilDesc initDefaultDepthOnStencilOff();
+	static D3dDepthStencilDesc initDepthNoWriteStencilOff();
 	ID3D11DepthStencilState* mState;
 private:
 	DepthStencilState();
@@ -307,7 +305,7 @@ class RasterizerState
 public:
 	RasterizerState(D3dRasterizerDesc& desc);
 	virtual ~RasterizerState();
-	static void initDefaultState(D3dRasterizerDesc& desc);
+	static D3dRasterizerDesc initDefaultState();
 	ID3D11RasterizerState* mState;
 private:
 	RasterizerState();
@@ -319,10 +317,10 @@ class BlendState
 public:
 	BlendState(D3dBlendDesc & desc);
 	virtual ~BlendState();
-	static void initDisabledState(D3dBlendDesc & desc);
-	static void initPreMultBlendState(D3dBlendDesc & desc);
-	static void initPreMultDualBlendState(D3dBlendDesc & desc);
-	static void initAdditiveState(D3dBlendDesc & desc);
+	static D3dBlendDesc initDisabledState();
+	static D3dBlendDesc initPreMultBlendState();
+	static D3dBlendDesc initPreMultDualBlendState();
+	static D3dBlendDesc initAdditiveState();
 	ID3D11BlendState* mState;
 private:
 	BlendState();

@@ -194,25 +194,30 @@ void RenderBuffer::unmap(ScopedMappedRenderbuffer& mappedBuffer)
 	}
 }
 
-void RenderBuffer::initConstantBufferDesc_dynamic(D3dBufferDesc& desc, uint32 byteSize)
+D3dBufferDesc RenderBuffer::initConstantBufferDesc_dynamic(uint32 byteSize)
 {
-	desc = { byteSize , D3D11_USAGE_DYNAMIC, D3D11_BIND_CONSTANT_BUFFER, D3D11_CPU_ACCESS_WRITE, 0, 0 };
+	D3dBufferDesc desc = { byteSize , D3D11_USAGE_DYNAMIC, D3D11_BIND_CONSTANT_BUFFER, D3D11_CPU_ACCESS_WRITE, 0, 0 };
+	return desc;
 }
-void RenderBuffer::initVertexBufferDesc_default(D3dBufferDesc& desc, uint32 byteSize)
+D3dBufferDesc RenderBuffer::initVertexBufferDesc_default(uint32 byteSize)
 {
-	desc = { byteSize , D3D11_USAGE_DEFAULT, D3D11_BIND_VERTEX_BUFFER, 0, 0, 0 };
+	D3dBufferDesc desc = { byteSize , D3D11_USAGE_DEFAULT, D3D11_BIND_VERTEX_BUFFER, 0, 0, 0 };
+	return desc;
 }
-void RenderBuffer::initIndexBufferDesc_default(D3dBufferDesc& desc, uint32 byteSize)
+D3dBufferDesc RenderBuffer::initIndexBufferDesc_default(uint32 byteSize)
 {
-	desc = { byteSize , D3D11_USAGE_DEFAULT, D3D11_BIND_INDEX_BUFFER, 0, 0, 0 };
+	D3dBufferDesc desc = { byteSize , D3D11_USAGE_DEFAULT, D3D11_BIND_INDEX_BUFFER, 0, 0, 0 };
+	return desc;
 }
-void RenderBuffer::initBufferDesc_default(D3dBufferDesc& desc, uint32 byteSize)
+D3dBufferDesc RenderBuffer::initBufferDesc_default(uint32 byteSize)
 {
-	desc = { byteSize , D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE, 0, 0, 0 };
+	D3dBufferDesc desc = { byteSize , D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE, 0, 0, 0 };
+	return desc;
 }
-void RenderBuffer::initBufferDesc_uav(D3dBufferDesc& desc, uint32 byteSize)
+D3dBufferDesc RenderBuffer::initBufferDesc_uav(uint32 byteSize)
 {
-	desc = { byteSize , D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS, 0, 0, 0 };
+	D3dBufferDesc desc = { byteSize , D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS, 0, 0, 0 };
+	return desc;
 }
 
 
@@ -352,8 +357,9 @@ Texture2D::~Texture2D()
 	}
 	resetComPtr(&mTexture);
 }
-void Texture2D::initDepthStencilBuffer(D3dTexture2dDesc& desc, uint32 width, uint32 height, bool uav)
+D3dTexture2dDesc Texture2D::initDepthStencilBuffer(uint32 width, uint32 height, bool uav)
 {
+	D3dTexture2dDesc desc = { 0 };
 	desc.Width = width;
 	desc.Height = height;
 	desc.MipLevels = 1;
@@ -365,10 +371,12 @@ void Texture2D::initDepthStencilBuffer(D3dTexture2dDesc& desc, uint32 width, uin
 	desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_DEPTH_STENCIL | (uav ? D3D11_BIND_UNORDERED_ACCESS : 0);	// cannot be D3D11_BIND_SHADER_RESOURCE
 	desc.CPUAccessFlags = 0;
 	desc.MiscFlags = 0;
+	return desc;
 }
 
-void Texture2D::initDefault(D3dTexture2dDesc& desc, DXGI_FORMAT format, uint32 width, uint32 height, bool renderTarget, bool uav)
+D3dTexture2dDesc Texture2D::initDefault(DXGI_FORMAT format, uint32 width, uint32 height, bool renderTarget, bool uav)
 {
+	D3dTexture2dDesc desc = { 0 };
 	desc.Width = width;
 	desc.Height = height;
 	desc.MipLevels = 1;
@@ -380,6 +388,7 @@ void Texture2D::initDefault(D3dTexture2dDesc& desc, DXGI_FORMAT format, uint32 w
 	desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | (renderTarget ? D3D11_BIND_RENDER_TARGET : 0) | (uav ? D3D11_BIND_UNORDERED_ACCESS : 0);
 	desc.CPUAccessFlags = 0;
 	desc.MiscFlags = 0;
+	return desc;
 }
 
 
@@ -455,8 +464,9 @@ Texture3D::~Texture3D()
 	}
 	resetComPtr(&mTexture);
 }
-void Texture3D::initDefault(D3dTexture3dDesc& desc, DXGI_FORMAT format, uint32 width, uint32 height, uint32 depth, bool uav)
+D3dTexture3dDesc Texture3D::initDefault(DXGI_FORMAT format, uint32 width, uint32 height, uint32 depth, bool uav)
 {
+	D3dTexture3dDesc desc = { 0 };
 	desc.Width = width;
 	desc.Height = height;
 	desc.Depth = depth;
@@ -466,6 +476,7 @@ void Texture3D::initDefault(D3dTexture3dDesc& desc, DXGI_FORMAT format, uint32 w
 	desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | (uav ? D3D11_BIND_UNORDERED_ACCESS : 0);
 	desc.CPUAccessFlags = 0;
 	desc.MiscFlags = 0;
+	return desc;
 }
 
 
@@ -480,8 +491,9 @@ SamplerState::~SamplerState()
 {
 	resetComPtr(&mSampler);
 }
-void SamplerState::initLinearClamp(D3dSamplerDesc& desc)
+D3dSamplerDesc SamplerState::initLinearClamp()
 {
+	D3dSamplerDesc desc = { 0 };
 	desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
 	desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
 	desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
@@ -492,9 +504,11 @@ void SamplerState::initLinearClamp(D3dSamplerDesc& desc)
 	desc.BorderColor[0] = desc.BorderColor[1] = desc.BorderColor[2] = desc.BorderColor[3] = 1.0f;
 	desc.MinLOD = -FLT_MAX;
 	desc.MaxLOD = FLT_MAX;
+	return desc;
 }
-void SamplerState::initShadowCmpClamp(D3dSamplerDesc& desc)
+D3dSamplerDesc SamplerState::initShadowCmpClamp()
 {
+	D3dSamplerDesc desc = { 0 };
 	desc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
 	desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
 	desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
@@ -505,6 +519,7 @@ void SamplerState::initShadowCmpClamp(D3dSamplerDesc& desc)
 	desc.BorderColor[0] = desc.BorderColor[1] = desc.BorderColor[2] = desc.BorderColor[3] = 1.0f;
 	desc.MinLOD = -FLT_MAX;
 	desc.MaxLOD = FLT_MAX;
+	return desc;
 }
 
 
@@ -523,8 +538,9 @@ DepthStencilState::~DepthStencilState()
 {
 	resetComPtr(&mState);
 }
-void DepthStencilState::initDefaultDepthOnStencilOff(D3dDepthStencilDesc& desc)
+D3dDepthStencilDesc DepthStencilState::initDefaultDepthOnStencilOff()
 {
+	D3dDepthStencilDesc desc = { 0 };
 	// Depth test parameters
 	desc.DepthEnable = true;
 	desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
@@ -543,9 +559,11 @@ void DepthStencilState::initDefaultDepthOnStencilOff(D3dDepthStencilDesc& desc)
 	desc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
 	desc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
 	desc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+	return desc;
 }
-void DepthStencilState::initDepthNoWriteStencilOff(D3dDepthStencilDesc& desc)
+D3dDepthStencilDesc DepthStencilState::initDepthNoWriteStencilOff()
 {
+	D3dDepthStencilDesc desc = { 0 };
 	// Depth test parameters
 	desc.DepthEnable = true;
 	desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
@@ -564,6 +582,7 @@ void DepthStencilState::initDepthNoWriteStencilOff(D3dDepthStencilDesc& desc)
 	desc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
 	desc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
 	desc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+	return desc;
 }
 
 RasterizerState::RasterizerState(D3dRasterizerDesc& desc)
@@ -576,8 +595,9 @@ RasterizerState::~RasterizerState()
 {
 	resetComPtr(&mState);
 }
-void RasterizerState::initDefaultState(D3dRasterizerDesc& desc)
+D3dRasterizerDesc RasterizerState::initDefaultState()
 {
+	D3dRasterizerDesc desc = { 0 };
 	ZeroMemory(&desc, sizeof(D3dRasterizerDesc));
 	desc.AntialiasedLineEnable = FALSE;
 	desc.CullMode = D3D11_CULL_BACK;
@@ -589,6 +609,7 @@ void RasterizerState::initDefaultState(D3dRasterizerDesc& desc)
 	desc.MultisampleEnable = FALSE;
 	desc.ScissorEnable = FALSE;
 	desc.SlopeScaledDepthBias = 0.0f;
+	return desc;
 }
 
 
@@ -602,9 +623,9 @@ BlendState::~BlendState()
 {
 	resetComPtr(&mState);
 }
-void BlendState::initDisabledState(D3dBlendDesc & desc)
+D3dBlendDesc BlendState::initDisabledState()
 {
-	desc = { 0 };
+	D3dBlendDesc desc = { 0 };
 	desc.AlphaToCoverageEnable = false;
 	desc.IndependentBlendEnable = false;
 	desc.RenderTarget[0].BlendEnable = false;
@@ -615,10 +636,11 @@ void BlendState::initDisabledState(D3dBlendDesc & desc)
 	desc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
 	desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
 	desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+	return desc;
 }
-void BlendState::initPreMultBlendState(D3dBlendDesc & desc)
+D3dBlendDesc BlendState::initPreMultBlendState()
 {
-	desc = { 0 };
+	D3dBlendDesc desc = { 0 };
 	desc.AlphaToCoverageEnable = false;
 	desc.IndependentBlendEnable = false;
 	desc.RenderTarget[0].BlendEnable = true;
@@ -629,10 +651,11 @@ void BlendState::initPreMultBlendState(D3dBlendDesc & desc)
 	desc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_INV_SRC_ALPHA;
 	desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;			// src*0 + dst * (1.0 - srcA)
 	desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+	return desc;
 }
-void BlendState::initPreMultDualBlendState(D3dBlendDesc & desc)
+D3dBlendDesc BlendState::initPreMultDualBlendState()
 {
-	desc = { 0 };
+	D3dBlendDesc desc = { 0 };
 	desc.AlphaToCoverageEnable = false;
 	desc.IndependentBlendEnable = false;
 	desc.RenderTarget[0].BlendEnable = true;
@@ -643,10 +666,11 @@ void BlendState::initPreMultDualBlendState(D3dBlendDesc & desc)
 	desc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ONE;
 	desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;			// src*0  + dst*1		, keep alpha intact
 	desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+	return desc;
 }
-void BlendState::initAdditiveState(D3dBlendDesc & desc)
+D3dBlendDesc BlendState::initAdditiveState()
 {
-	desc = { 0 };
+	D3dBlendDesc desc = { 0 };
 	desc.AlphaToCoverageEnable = false;
 	desc.IndependentBlendEnable = false;
 	desc.RenderTarget[0].BlendEnable = true;
@@ -657,6 +681,7 @@ void BlendState::initAdditiveState(D3dBlendDesc & desc)
 	desc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ONE;
 	desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
 	desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+	return desc;
 }
 
 
