@@ -81,8 +81,7 @@ void Game::initialise()
 
 	////////// Create other resources
 
-	ID3D11Device* device = g_dx11Device->getDevice();
-	//ID3D11DeviceContext* context = g_dx11Device->getDeviceContext();
+	DeviceD3d* device = g_dx11Device->getDevice();
 
 	// Simple triangle geometry
 	VertexType vertices[3];
@@ -179,8 +178,8 @@ void Game::render()
 {
 	GPU_SCOPED_TIMEREVENT(GameRender, 75, 75, 75);
 
-	ID3D11DeviceContext* context = g_dx11Device->getDeviceContext();
-	ID3D11RenderTargetView* backBuffer = g_dx11Device->getBackBufferRT();
+	RenderContext* context = g_dx11Device->getDeviceContext();
+	RenderTargetView* backBuffer = g_dx11Device->getBackBufferRT();
 
 	// Constant buffer update
 	{

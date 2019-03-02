@@ -19,6 +19,7 @@
 	#pragma comment( lib, "dxguid.lib")	// For debug name guid
 #endif
 
+typedef ID3D11Device DeviceD3d;
 typedef ID3D11DeviceContext RenderContext;
 typedef ID3D11InputLayout InputLayout;
 typedef D3D11_VIEWPORT Viewport;
@@ -26,7 +27,6 @@ typedef ID3D11ShaderResourceView ShaderResourceView;
 typedef ID3D11UnorderedAccessView UnorderedAccessView;
 typedef ID3D11RenderTargetView RenderTargetView;
 typedef ID3D11DepthStencilView DepthStencilView;
-typedef unsigned int uint;
 
 class Dx11Device
 {
@@ -35,7 +35,7 @@ public:
 	static void initialise(const HWND& hWnd);
 	static void shutdown();
 
-	ID3D11Device*							getDevice()			{ return mDev; }
+	DeviceD3d*								getDevice()			{ return mDev; }
 	RenderContext*							getDeviceContext()	{ return mDevcon; }
 	IDXGISwapChain*							getSwapChain()		{ return mSwapchain; }
 	RenderTargetView*						getBackBufferRT()	{ return mBackBufferRT; }

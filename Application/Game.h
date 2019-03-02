@@ -60,7 +60,7 @@ private:
 	CommonConstantBuffer* mConstantBuffer;
 
 	RenderBuffer* mSomeBuffer;
-	ID3D11UnorderedAccessView* mSomeBufferUavView;
+	UnorderedAccessView* mSomeBufferUavView;
 
 	DepthStencilState* mDefaultDepthStencilState;
 	BlendState* mDefaultBlendState;
@@ -72,7 +72,7 @@ private:
 	ComputeShader*mToyShader;
 	PixelShader*  mPostProcessShader;
 
-	ID3D11InputLayout* mLayout;
+	InputLayout* mLayout;
 
 	Texture2D* mBackBufferHdr;
 	Texture2D* mBackBufferDepth;

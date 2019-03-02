@@ -185,7 +185,7 @@ int WINAPI WinMain(HINSTANCE hInstance,
 						= [](const DxGpuPerformance::TimerGraphNode* node, int level) -> void
 					{
 						char* levelOffset = "---------------";	// 16 chars
-						uint levelShift = 16 - 2 * level - 1;
+						unsigned int levelShift = 16 - 2 * level - 1;
 						char* levelOffsetPtr = levelOffset + (levelShift<0 ? 0 : levelShift); // cheap way to add shifting to a printf
 
 						char debugStr[128];
