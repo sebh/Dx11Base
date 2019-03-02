@@ -22,28 +22,28 @@
 #endif
 
 
-typedef ID3D11Device						DeviceD3d;
-typedef ID3D11DeviceContext					RenderContext;
+typedef ID3D11Device						D3dDevice;
+typedef ID3D11DeviceContext					D3dRenderContext;
 
-typedef ID3D11InputLayout					InputLayout;
-typedef D3D11_INPUT_ELEMENT_DESC			InputElementDesc;
-typedef D3D11_VIEWPORT						Viewport;
+typedef ID3D11InputLayout					D3dInputLayout;
+typedef D3D11_INPUT_ELEMENT_DESC			D3dInputElementDesc;
+typedef D3D11_VIEWPORT						D3dViewport;
 
-typedef ID3D11ShaderResourceView			ShaderResourceView;
-typedef D3D11_UNORDERED_ACCESS_VIEW_DESC	UnorderedAccessViewDesc;
-typedef ID3D11UnorderedAccessView			UnorderedAccessView;
-typedef ID3D11RenderTargetView				RenderTargetView;
-typedef ID3D11DepthStencilView				DepthStencilView;
+typedef ID3D11ShaderResourceView			D3dShaderResourceView;
+typedef D3D11_UNORDERED_ACCESS_VIEW_DESC	D3dUnorderedAccessViewDesc;
+typedef ID3D11UnorderedAccessView			D3dUnorderedAccessView;
+typedef ID3D11RenderTargetView				D3dRenderTargetView;
+typedef ID3D11DepthStencilView				D3dDepthStencilView;
 
-typedef D3D11_BUFFER_DESC					BufferDesc;
-typedef D3D11_TEXTURE2D_DESC				Texture2dDesc;
-typedef D3D11_TEXTURE3D_DESC				Texture3dDesc;
-typedef D3D11_SUBRESOURCE_DATA				SubResourceData;
-typedef D3D11_SAMPLER_DESC					SamplerDesc;
+typedef D3D11_BUFFER_DESC					D3dBufferDesc;
+typedef D3D11_TEXTURE2D_DESC				D3dTexture2dDesc;
+typedef D3D11_TEXTURE3D_DESC				D3dTexture3dDesc;
+typedef D3D11_SUBRESOURCE_DATA				D3dSubResourceData;
+typedef D3D11_SAMPLER_DESC					D3dSamplerDesc;
 
-typedef D3D11_DEPTH_STENCIL_DESC			DepthStencilDesc;
-typedef D3D11_RASTERIZER_DESC				RasterizerDesc;
-typedef D3D11_BLEND_DESC					BlendDesc;
+typedef D3D11_DEPTH_STENCIL_DESC			D3dDepthStencilDesc;
+typedef D3D11_RASTERIZER_DESC				D3dRasterizerDesc;
+typedef D3D11_BLEND_DESC					D3dBlendDesc;
 
 
 
@@ -54,10 +54,10 @@ public:
 	static void initialise(const HWND& hWnd);
 	static void shutdown();
 
-	DeviceD3d*								getDevice()			{ return mDev; }
-	RenderContext*							getDeviceContext()	{ return mDevcon; }
+	D3dDevice*								getDevice()			{ return mDev; }
+	D3dRenderContext*						getDeviceContext()	{ return mDevcon; }
 	IDXGISwapChain*							getSwapChain()		{ return mSwapchain; }
-	RenderTargetView*						getBackBufferRT()	{ return mBackBufferRT; }
+	D3dRenderTargetView*					getBackBufferRT()	{ return mBackBufferRT; }
 
 #if DX_DEBUG_EVENT
 	CComPtr<ID3DUserDefinedAnnotation>		mUserDefinedAnnotation;
@@ -65,31 +65,31 @@ public:
 
 	void swap(bool vsyncEnabled);
 
-	static void setNullRenderTarget(RenderContext* devcon)
+	static void setNullRenderTarget(D3dRenderContext* devcon)
 	{
-		RenderTargetView*    nullRTV = nullptr;
-		UnorderedAccessView* nullUAV = nullptr;
+		D3dRenderTargetView*    nullRTV = nullptr;
+		D3dUnorderedAccessView* nullUAV = nullptr;
 		//devcon->OMSetRenderTargets(1, &nullRTV, nullptr);
 		devcon->OMSetRenderTargetsAndUnorderedAccessViews(1, &nullRTV, nullptr, 1, 0, &nullUAV, nullptr);
 	}
-	static void setNullPsResources(RenderContext* devcon)
+	static void setNullPsResources(D3dRenderContext* devcon)
 	{
-		static ShaderResourceView* null[16] = { nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };	// not good, only 8, would need something smarter maybe...
+		static D3dShaderResourceView* null[16] = { nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };	// not good, only 8, would need something smarter maybe...
 		devcon->PSSetShaderResources(0, 16, null);
 	}
-	static void setNullVsResources(RenderContext* devcon)
+	static void setNullVsResources(D3dRenderContext* devcon)
 	{
-		static ShaderResourceView* null[16] = { nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };
+		static D3dShaderResourceView* null[16] = { nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };
 		devcon->VSSetShaderResources(0, 16, null);
 	}
-	static void setNullCsResources(RenderContext* devcon)
+	static void setNullCsResources(D3dRenderContext* devcon)
 	{
-		static ShaderResourceView* null[16] = { nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };
+		static D3dShaderResourceView* null[16] = { nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };
 		devcon->CSSetShaderResources(0, 16, null);
 	}
-	static void setNullCsUnorderedAccessViews(RenderContext* devcon)
+	static void setNullCsUnorderedAccessViews(D3dRenderContext* devcon)
 	{
-		static UnorderedAccessView* null[8] = { nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };
+		static D3dUnorderedAccessView* null[8] = { nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr };
 		devcon->CSSetUnorderedAccessViews(0, 8, null, nullptr);
 	}
 
@@ -104,9 +104,9 @@ private:
 
 	IDXGISwapChain*							mSwapchain;				// the pointer to the swap chain interface
 	ID3D11Device*							mDev;					// the pointer to our Direct3D device interface
-	RenderContext*							mDevcon;				// the pointer to our Direct3D device context
+	D3dRenderContext*							mDevcon;				// the pointer to our Direct3D device context
 
-	RenderTargetView*						mBackBufferRT;			// back buffer render target
+	D3dRenderTargetView*						mBackBufferRT;			// back buffer render target
 };
 
 extern Dx11Device* g_dx11Device;
@@ -163,7 +163,7 @@ class RenderBuffer
 {
 public:
 
-	RenderBuffer(BufferDesc& mBufferDesc, void* initialData=nullptr);
+	RenderBuffer(D3dBufferDesc& mBufferDesc, void* initialData=nullptr);
 	virtual ~RenderBuffer();
 
 
@@ -189,14 +189,14 @@ public:
 
 	// Some basic descriptor initialisation methods
 
-	static void initConstantBufferDesc_dynamic(BufferDesc& desc, uint32 byteSize);
-	static void initVertexBufferDesc_default(BufferDesc& desc, uint32 byteSize);
-	static void initIndexBufferDesc_default(BufferDesc& desc, uint32 byteSize);
-	static void initBufferDesc_default(BufferDesc& desc, uint32 byteSize);
-	static void initBufferDesc_uav(BufferDesc& desc, uint32 byteSize);
+	static void initConstantBufferDesc_dynamic(D3dBufferDesc& desc, uint32 byteSize);
+	static void initVertexBufferDesc_default(D3dBufferDesc& desc, uint32 byteSize);
+	static void initIndexBufferDesc_default(D3dBufferDesc& desc, uint32 byteSize);
+	static void initBufferDesc_default(D3dBufferDesc& desc, uint32 byteSize);
+	static void initBufferDesc_uav(D3dBufferDesc& desc, uint32 byteSize);
 
 public:///////////////////////////////////protected:
-	BufferDesc mDesc;
+	D3dBufferDesc mDesc;
 	ID3D11Buffer* mBuffer;
 
 private:
@@ -221,10 +221,10 @@ public:
 	}
 private:
 
-	static BufferDesc getDesc()
+	static D3dBufferDesc getDesc()
 	{
 		ATLASSERT(sizeof(T) % 16 == 0);
-		BufferDesc desc;
+		D3dBufferDesc desc;
 		RenderBuffer::initConstantBufferDesc_dynamic(desc, sizeof(T));
 		return desc;
 	}
@@ -238,16 +238,16 @@ private:
 class Texture2D
 {
 public:
-	Texture2D(Texture2dDesc& desc, SubResourceData* initialData = nullptr);
+	Texture2D(D3dTexture2dDesc& desc, D3dSubResourceData* initialData = nullptr);
 	virtual ~Texture2D();
-	static void initDepthStencilBuffer(Texture2dDesc& desc, uint32 width, uint32 height, bool uav);
-	static void initDefault(Texture2dDesc& desc, DXGI_FORMAT format, uint32 width, uint32 height, bool renderTarget, bool uav);
-	Texture2dDesc mDesc;
+	static void initDepthStencilBuffer(D3dTexture2dDesc& desc, uint32 width, uint32 height, bool uav);
+	static void initDefault(D3dTexture2dDesc& desc, DXGI_FORMAT format, uint32 width, uint32 height, bool renderTarget, bool uav);
+	D3dTexture2dDesc mDesc;
 	ID3D11Texture2D* mTexture = nullptr;
-	DepthStencilView* mDepthStencilView = nullptr;
-	RenderTargetView* mRenderTargetView = nullptr;
-	ShaderResourceView* mShaderResourceView = nullptr;
-	UnorderedAccessView* mUnorderedAccessView = nullptr;
+	D3dDepthStencilView* mDepthStencilView = nullptr;
+	D3dRenderTargetView* mRenderTargetView = nullptr;
+	D3dShaderResourceView* mShaderResourceView = nullptr;
+	D3dUnorderedAccessView* mUnorderedAccessView = nullptr;
 private:
 	Texture2D();
 	Texture2D(Texture2D&);
@@ -256,15 +256,15 @@ private:
 class Texture3D
 {
 public:
-	Texture3D(Texture3dDesc& desc, SubResourceData* initialData = nullptr);
+	Texture3D(D3dTexture3dDesc& desc, D3dSubResourceData* initialData = nullptr);
 	virtual ~Texture3D();
-	static void initDefault(Texture3dDesc& desc, DXGI_FORMAT format, uint32 width, uint32 height, uint32 depth, bool uav);
-	Texture3dDesc mDesc;
+	static void initDefault(D3dTexture3dDesc& desc, DXGI_FORMAT format, uint32 width, uint32 height, uint32 depth, bool uav);
+	D3dTexture3dDesc mDesc;
 	ID3D11Texture3D* mTexture = nullptr;
-	ShaderResourceView* mShaderResourceView = nullptr;			// level 0
-	UnorderedAccessView* mUnorderedAccessView = nullptr;			// level 0
-	std::vector<ShaderResourceView*> mShaderResourceViewMips;		// all levels
-	std::vector<UnorderedAccessView*> mUnorderedAccessViewMips;	// all levels
+	D3dShaderResourceView* mShaderResourceView = nullptr;			// level 0
+	D3dUnorderedAccessView* mUnorderedAccessView = nullptr;			// level 0
+	std::vector<D3dShaderResourceView*> mShaderResourceViewMips;		// all levels
+	std::vector<D3dUnorderedAccessView*> mUnorderedAccessViewMips;	// all levels
 private:
 	Texture3D();
 	Texture3D(Texture3D&);
@@ -273,10 +273,10 @@ private:
 class SamplerState
 {
 public:
-	SamplerState(SamplerDesc& desc);
+	SamplerState(D3dSamplerDesc& desc);
 	virtual ~SamplerState();
-	static void initLinearClamp(SamplerDesc& desc);
-	static void initShadowCmpClamp(SamplerDesc& desc);
+	static void initLinearClamp(D3dSamplerDesc& desc);
+	static void initShadowCmpClamp(D3dSamplerDesc& desc);
 	ID3D11SamplerState* mSampler = nullptr;
 private:
 	SamplerState();
@@ -292,10 +292,10 @@ private:
 class DepthStencilState
 {
 public:
-	DepthStencilState(DepthStencilDesc& desc);
+	DepthStencilState(D3dDepthStencilDesc& desc);
 	virtual ~DepthStencilState();
-	static void initDefaultDepthOnStencilOff(DepthStencilDesc& desc);
-	static void initDepthNoWriteStencilOff(DepthStencilDesc& desc);
+	static void initDefaultDepthOnStencilOff(D3dDepthStencilDesc& desc);
+	static void initDepthNoWriteStencilOff(D3dDepthStencilDesc& desc);
 	ID3D11DepthStencilState* mState;
 private:
 	DepthStencilState();
@@ -305,9 +305,9 @@ private:
 class RasterizerState
 {
 public:
-	RasterizerState(RasterizerDesc& desc);
+	RasterizerState(D3dRasterizerDesc& desc);
 	virtual ~RasterizerState();
-	static void initDefaultState(RasterizerDesc& desc);
+	static void initDefaultState(D3dRasterizerDesc& desc);
 	ID3D11RasterizerState* mState;
 private:
 	RasterizerState();
@@ -317,12 +317,12 @@ private:
 class BlendState
 {
 public:
-	BlendState(BlendDesc & desc);
+	BlendState(D3dBlendDesc & desc);
 	virtual ~BlendState();
-	static void initDisabledState(BlendDesc & desc);
-	static void initPreMultBlendState(BlendDesc & desc);
-	static void initPreMultDualBlendState(BlendDesc & desc);
-	static void initAdditiveState(BlendDesc & desc);
+	static void initDisabledState(D3dBlendDesc & desc);
+	static void initPreMultBlendState(D3dBlendDesc & desc);
+	static void initPreMultDualBlendState(D3dBlendDesc & desc);
+	static void initAdditiveState(D3dBlendDesc & desc);
 	ID3D11BlendState* mState;
 private:
 	BlendState();
@@ -335,7 +335,7 @@ private:
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-typedef std::vector<InputElementDesc> InputLayoutDesc;
+typedef std::vector<D3dInputElementDesc> InputLayoutDesc;
 
 // Append a simple per vertex data layout input 
 void appendSimpleVertexDataToInputLayout(InputLayoutDesc& inputLayout, const char* semanticName, DXGI_FORMAT format);
@@ -383,8 +383,8 @@ class VertexShader : public ShaderBase
 public:
 	VertexShader(const TCHAR* filename, const char* entryFunction, const Macros* macros = nullptr, bool lazyCompilation = false);
 	virtual ~VertexShader();
-	void createInputLayout(InputLayoutDesc inputLayout, InputLayout** layout);	// abstract that better
-	void setShader(RenderContext& context);
+	void createInputLayout(InputLayoutDesc inputLayout, D3dInputLayout** layout);	// abstract that better
+	void setShader(D3dRenderContext& context);
 private:
 	ID3D11VertexShader* mVertexShader;
 };
@@ -394,7 +394,7 @@ class PixelShader : public ShaderBase
 public:
 	PixelShader(const TCHAR* filename, const char* entryFunction, const Macros* macros = nullptr, bool lazyCompilation = false);
 	virtual ~PixelShader();
-	void setShader(RenderContext& context);
+	void setShader(D3dRenderContext& context);
 private:
 	ID3D11PixelShader* mPixelShader;
 };
@@ -404,7 +404,7 @@ class HullShader : public ShaderBase
 public:
 	HullShader(const TCHAR* filename, const char* entryFunction, const Macros* macros = nullptr, bool lazyCompilation = false);
 	virtual ~HullShader();
-	void setShader(RenderContext& context);
+	void setShader(D3dRenderContext& context);
 private:
 	ID3D11HullShader* mHullShader;
 };
@@ -414,7 +414,7 @@ class DomainShader : public ShaderBase
 public:
 	DomainShader(const TCHAR* filename, const char* entryFunction, const Macros* macros = nullptr, bool lazyCompilation = false);
 	virtual ~DomainShader();
-	void setShader(RenderContext& context);
+	void setShader(D3dRenderContext& context);
 private:
 	ID3D11DomainShader* mDomainShader;
 };
@@ -424,7 +424,7 @@ class GeometryShader : public ShaderBase
 public:
 	GeometryShader(const TCHAR* filename, const char* entryFunction, const Macros* macros = nullptr, bool lazyCompilation = false);
 	virtual ~GeometryShader();
-	void setShader(RenderContext& context);
+	void setShader(D3dRenderContext& context);
 private:
 	ID3D11GeometryShader* mGeometryShader;
 };
@@ -434,7 +434,7 @@ class ComputeShader : public ShaderBase
 public:
 	ComputeShader(const TCHAR* filename, const char* entryFunction, const Macros* macros = nullptr, bool lazyCompilation = false);
 	virtual ~ComputeShader();
-	void setShader(RenderContext& context);
+	void setShader(D3dRenderContext& context);
 private:
 	ID3D11ComputeShader* mComputeShader;
 };

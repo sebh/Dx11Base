@@ -47,11 +47,11 @@ void Game::loadShaders(bool firstTimeLoadShaders)
 	resetComPtr(&mLayout);
 	mVertexShader->createInputLayout(inputLayout, &mLayout);	// Have a layout object with vertex stride in it
 
-	Texture2dDesc backBufferDepthDesc;
+	D3dTexture2dDesc backBufferDepthDesc;
 	Texture2D::initDepthStencilBuffer(backBufferDepthDesc, 1280, 720, false);
 	mBackBufferDepth = new Texture2D(backBufferDepthDesc);
 
-	Texture2dDesc backBufferHdrDesc;
+	D3dTexture2dDesc backBufferHdrDesc;
 	Texture2D::initDefault(backBufferHdrDesc, DXGI_FORMAT_R32G32B32A32_FLOAT, 1280, 720, true, true); // using high precision for Monte Carlo integration
 	mBackBufferHdr = new Texture2D(backBufferHdrDesc);
 }
@@ -80,7 +80,7 @@ void Game::initialise()
 
 	////////// Create other resources
 
-	DeviceD3d* device = g_dx11Device->getDevice();
+	D3dDevice* device = g_dx11Device->getDevice();
 
 	// Simple triangle geometry
 	VertexType vertices[3];
@@ -94,11 +94,11 @@ void Game::initialise()
 
 
 	// Create 
-	BufferDesc vertexBufferDesc;
+	D3dBufferDesc vertexBufferDesc;
 	RenderBuffer::initVertexBufferDesc_default(vertexBufferDesc, sizeof(vertices));
 	vertexBuffer = new RenderBuffer(vertexBufferDesc, vertices);
 
-	BufferDesc indexBufferDesc;
+	D3dBufferDesc indexBufferDesc;
 	RenderBuffer::initIndexBufferDesc_default(indexBufferDesc, sizeof(indices));
 	indexBuffer = new RenderBuffer(indexBufferDesc, indices);
 
@@ -106,10 +106,10 @@ void Game::initialise()
 
 	uint32 bufferElementSize = (sizeof(float) * 4);
 	uint32 bufferElementCount = 1280 * 720;
-	BufferDesc someBufferDesc = { bufferElementCount * bufferElementSize , D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS, 0, 0, 0 };
+	D3dBufferDesc someBufferDesc = { bufferElementCount * bufferElementSize , D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS, 0, 0, 0 };
 	mSomeBuffer = new RenderBuffer(someBufferDesc);
 
-	UnorderedAccessViewDesc someBufferUavViewDesc;
+	D3dUnorderedAccessViewDesc someBufferUavViewDesc;
 	someBufferUavViewDesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
 	someBufferUavViewDesc.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
 	someBufferUavViewDesc.Buffer.FirstElement = 0;
@@ -118,15 +118,15 @@ void Game::initialise()
 	HRESULT hr = device->CreateUnorderedAccessView(mSomeBuffer->mBuffer, &someBufferUavViewDesc, &mSomeBufferUavView);
 	ATLASSERT(hr == S_OK);
 
-	DepthStencilDesc depthStencilState;
+	D3dDepthStencilDesc depthStencilState;
 	DepthStencilState::initDefaultDepthOnStencilOff(depthStencilState);
 	mDefaultDepthStencilState = new DepthStencilState(depthStencilState);
 
-	RasterizerDesc rasterDesc;
+	D3dRasterizerDesc rasterDesc;
 	RasterizerState::initDefaultState(rasterDesc);
 	mDefaultRasterizerState = new RasterizerState(rasterDesc);
 
-	BlendDesc blendDesc;
+	D3dBlendDesc blendDesc;
 	BlendState::initDisabledState(blendDesc);
 	mDefaultBlendState = new BlendState(blendDesc);
 }
@@ -177,8 +177,8 @@ void Game::render()
 {
 	GPU_SCOPED_TIMEREVENT(GameRender, 75, 75, 75);
 
-	RenderContext* context = g_dx11Device->getDeviceContext();
-	RenderTargetView* backBuffer = g_dx11Device->getBackBufferRT();
+	D3dRenderContext* context = g_dx11Device->getDeviceContext();
+	D3dRenderTargetView* backBuffer = g_dx11Device->getBackBufferRT();
 
 	// Constant buffer update
 	{
@@ -200,8 +200,8 @@ void Game::render()
 		context->OMSetBlendState(mDefaultBlendState->mState, nullptr, 0xffffffff);
 		context->RSSetState(mDefaultRasterizerState->mState);
 
-		Viewport viewport;
-		ZeroMemory(&viewport, sizeof(Viewport));
+		D3dViewport viewport;
+		ZeroMemory(&viewport, sizeof(D3dViewport));
 		viewport.TopLeftX = 0;
 		viewport.TopLeftY = 0;
 		viewport.Width = 1280;					// TODO manage that as it is not in sync with  D:\Projects\DX11Intro\dx11Intro\WindowHelper.cpp

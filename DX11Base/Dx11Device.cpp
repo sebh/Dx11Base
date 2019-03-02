@@ -91,8 +91,8 @@ void Dx11Device::internalInitialise(const HWND& hWnd)
 	// By default, set the back buffer as current render target and viewport (no sate tracking for now...)
 	mDevcon->OMSetRenderTargets(1, &mBackBufferRT, NULL); 
 	
-	Viewport viewport;
-	ZeroMemory(&viewport, sizeof(Viewport));
+	D3dViewport viewport;
+	ZeroMemory(&viewport, sizeof(D3dViewport));
 	viewport.TopLeftX = 0;
 	viewport.TopLeftY = 0;
 	viewport.Width = 1280;					// TODO manage that as it is not in sync with  D:\Projects\DX11Intro\dx11Intro\WindowHelper.cpp
@@ -152,12 +152,12 @@ void Dx11Device::swap(bool vsyncEnabled)
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-RenderBuffer::RenderBuffer(BufferDesc& bufferDesc, void* initialData) :
+RenderBuffer::RenderBuffer(D3dBufferDesc& bufferDesc, void* initialData) :
 	mDesc(bufferDesc)
 {
 	ID3D11Device* device = g_dx11Device->getDevice();
 
-	SubResourceData data;
+	D3dSubResourceData data;
 	data.pSysMem = initialData;
 	data.SysMemPitch = 0;
 	data.SysMemSlicePitch = 0;
@@ -179,7 +179,7 @@ void RenderBuffer::map(D3D11_MAP map, ScopedMappedRenderbuffer& mappedBuffer)
 	// Reset to 0
 	ZeroMemory(&mappedBuffer.mMappedResource, sizeof(D3D11_MAPPED_SUBRESOURCE));
 
-	RenderContext* context = g_dx11Device->getDeviceContext();
+	D3dRenderContext* context = g_dx11Device->getDeviceContext();
 	context->Map(mBuffer, 0, map, 0, &mappedBuffer.mMappedResource);
 	mappedBuffer.mMappedBuffer = mBuffer;
 }
@@ -188,29 +188,29 @@ void RenderBuffer::unmap(ScopedMappedRenderbuffer& mappedBuffer)
 {
 	if (mappedBuffer.mMappedBuffer)
 	{
-		RenderContext* context = g_dx11Device->getDeviceContext();
+		D3dRenderContext* context = g_dx11Device->getDeviceContext();
 		context->Unmap(mappedBuffer.mMappedBuffer, 0);
 		mappedBuffer.mMappedBuffer = nullptr;
 	}
 }
 
-void RenderBuffer::initConstantBufferDesc_dynamic(BufferDesc& desc, uint32 byteSize)
+void RenderBuffer::initConstantBufferDesc_dynamic(D3dBufferDesc& desc, uint32 byteSize)
 {
 	desc = { byteSize , D3D11_USAGE_DYNAMIC, D3D11_BIND_CONSTANT_BUFFER, D3D11_CPU_ACCESS_WRITE, 0, 0 };
 }
-void RenderBuffer::initVertexBufferDesc_default(BufferDesc& desc, uint32 byteSize)
+void RenderBuffer::initVertexBufferDesc_default(D3dBufferDesc& desc, uint32 byteSize)
 {
 	desc = { byteSize , D3D11_USAGE_DEFAULT, D3D11_BIND_VERTEX_BUFFER, 0, 0, 0 };
 }
-void RenderBuffer::initIndexBufferDesc_default(BufferDesc& desc, uint32 byteSize)
+void RenderBuffer::initIndexBufferDesc_default(D3dBufferDesc& desc, uint32 byteSize)
 {
 	desc = { byteSize , D3D11_USAGE_DEFAULT, D3D11_BIND_INDEX_BUFFER, 0, 0, 0 };
 }
-void RenderBuffer::initBufferDesc_default(BufferDesc& desc, uint32 byteSize)
+void RenderBuffer::initBufferDesc_default(D3dBufferDesc& desc, uint32 byteSize)
 {
 	desc = { byteSize , D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE, 0, 0, 0 };
 }
-void RenderBuffer::initBufferDesc_uav(BufferDesc& desc, uint32 byteSize)
+void RenderBuffer::initBufferDesc_uav(D3dBufferDesc& desc, uint32 byteSize)
 {
 	desc = { byteSize , D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS, 0, 0, 0 };
 }
@@ -290,7 +290,7 @@ bool isFormatTypeless(DXGI_FORMAT format)
 	return false;
 }
 
-Texture2D::Texture2D(Texture2dDesc& desc, SubResourceData* initialData) :
+Texture2D::Texture2D(D3dTexture2dDesc& desc, D3dSubResourceData* initialData) :
 	mDesc(desc)
 {
 	ID3D11Device* device = g_dx11Device->getDevice();
@@ -352,7 +352,7 @@ Texture2D::~Texture2D()
 	}
 	resetComPtr(&mTexture);
 }
-void Texture2D::initDepthStencilBuffer(Texture2dDesc& desc, uint32 width, uint32 height, bool uav)
+void Texture2D::initDepthStencilBuffer(D3dTexture2dDesc& desc, uint32 width, uint32 height, bool uav)
 {
 	desc.Width = width;
 	desc.Height = height;
@@ -367,7 +367,7 @@ void Texture2D::initDepthStencilBuffer(Texture2dDesc& desc, uint32 width, uint32
 	desc.MiscFlags = 0;
 }
 
-void Texture2D::initDefault(Texture2dDesc& desc, DXGI_FORMAT format, uint32 width, uint32 height, bool renderTarget, bool uav)
+void Texture2D::initDefault(D3dTexture2dDesc& desc, DXGI_FORMAT format, uint32 width, uint32 height, bool renderTarget, bool uav)
 {
 	desc.Width = width;
 	desc.Height = height;
@@ -386,7 +386,7 @@ void Texture2D::initDefault(Texture2dDesc& desc, DXGI_FORMAT format, uint32 widt
 
 
 
-Texture3D::Texture3D(Texture3dDesc& desc, SubResourceData* initialData) :
+Texture3D::Texture3D(D3dTexture3dDesc& desc, D3dSubResourceData* initialData) :
 	mDesc(desc)
 {
 	ID3D11Device* device = g_dx11Device->getDevice();
@@ -455,7 +455,7 @@ Texture3D::~Texture3D()
 	}
 	resetComPtr(&mTexture);
 }
-void Texture3D::initDefault(Texture3dDesc& desc, DXGI_FORMAT format, uint32 width, uint32 height, uint32 depth, bool uav)
+void Texture3D::initDefault(D3dTexture3dDesc& desc, DXGI_FORMAT format, uint32 width, uint32 height, uint32 depth, bool uav)
 {
 	desc.Width = width;
 	desc.Height = height;
@@ -470,7 +470,7 @@ void Texture3D::initDefault(Texture3dDesc& desc, DXGI_FORMAT format, uint32 widt
 
 
 
-SamplerState::SamplerState(SamplerDesc& desc)
+SamplerState::SamplerState(D3dSamplerDesc& desc)
 {
 	ID3D11Device* device = g_dx11Device->getDevice();
 	HRESULT hr = device->CreateSamplerState(&desc, &mSampler);
@@ -480,7 +480,7 @@ SamplerState::~SamplerState()
 {
 	resetComPtr(&mSampler);
 }
-void SamplerState::initLinearClamp(SamplerDesc& desc)
+void SamplerState::initLinearClamp(D3dSamplerDesc& desc)
 {
 	desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
 	desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
@@ -493,7 +493,7 @@ void SamplerState::initLinearClamp(SamplerDesc& desc)
 	desc.MinLOD = -FLT_MAX;
 	desc.MaxLOD = FLT_MAX;
 }
-void SamplerState::initShadowCmpClamp(SamplerDesc& desc)
+void SamplerState::initShadowCmpClamp(D3dSamplerDesc& desc)
 {
 	desc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
 	desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
@@ -513,7 +513,7 @@ void SamplerState::initShadowCmpClamp(SamplerDesc& desc)
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-DepthStencilState::DepthStencilState(DepthStencilDesc& desc)
+DepthStencilState::DepthStencilState(D3dDepthStencilDesc& desc)
 {
 	ID3D11Device* device = g_dx11Device->getDevice();
 	HRESULT hr = device->CreateDepthStencilState(&desc, &mState);
@@ -523,7 +523,7 @@ DepthStencilState::~DepthStencilState()
 {
 	resetComPtr(&mState);
 }
-void DepthStencilState::initDefaultDepthOnStencilOff(DepthStencilDesc& desc)
+void DepthStencilState::initDefaultDepthOnStencilOff(D3dDepthStencilDesc& desc)
 {
 	// Depth test parameters
 	desc.DepthEnable = true;
@@ -544,7 +544,7 @@ void DepthStencilState::initDefaultDepthOnStencilOff(DepthStencilDesc& desc)
 	desc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
 	desc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
 }
-void DepthStencilState::initDepthNoWriteStencilOff(DepthStencilDesc& desc)
+void DepthStencilState::initDepthNoWriteStencilOff(D3dDepthStencilDesc& desc)
 {
 	// Depth test parameters
 	desc.DepthEnable = true;
@@ -566,7 +566,7 @@ void DepthStencilState::initDepthNoWriteStencilOff(DepthStencilDesc& desc)
 	desc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
 }
 
-RasterizerState::RasterizerState(RasterizerDesc& desc)
+RasterizerState::RasterizerState(D3dRasterizerDesc& desc)
 {
 	ID3D11Device* device = g_dx11Device->getDevice();
 	HRESULT hr = device->CreateRasterizerState(&desc, &mState);
@@ -576,9 +576,9 @@ RasterizerState::~RasterizerState()
 {
 	resetComPtr(&mState);
 }
-void RasterizerState::initDefaultState(RasterizerDesc& desc)
+void RasterizerState::initDefaultState(D3dRasterizerDesc& desc)
 {
-	ZeroMemory(&desc, sizeof(RasterizerDesc));
+	ZeroMemory(&desc, sizeof(D3dRasterizerDesc));
 	desc.AntialiasedLineEnable = FALSE;
 	desc.CullMode = D3D11_CULL_BACK;
 	desc.DepthBias = 0;
@@ -592,7 +592,7 @@ void RasterizerState::initDefaultState(RasterizerDesc& desc)
 }
 
 
-BlendState::BlendState(BlendDesc & desc)
+BlendState::BlendState(D3dBlendDesc & desc)
 {
 	ID3D11Device* device = g_dx11Device->getDevice();
 	HRESULT hr = device->CreateBlendState(&desc, &mState);
@@ -602,7 +602,7 @@ BlendState::~BlendState()
 {
 	resetComPtr(&mState);
 }
-void BlendState::initDisabledState(BlendDesc & desc)
+void BlendState::initDisabledState(D3dBlendDesc & desc)
 {
 	desc = { 0 };
 	desc.AlphaToCoverageEnable = false;
@@ -616,7 +616,7 @@ void BlendState::initDisabledState(BlendDesc & desc)
 	desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
 	desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
 }
-void BlendState::initPreMultBlendState(BlendDesc & desc)
+void BlendState::initPreMultBlendState(D3dBlendDesc & desc)
 {
 	desc = { 0 };
 	desc.AlphaToCoverageEnable = false;
@@ -630,7 +630,7 @@ void BlendState::initPreMultBlendState(BlendDesc & desc)
 	desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;			// src*0 + dst * (1.0 - srcA)
 	desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
 }
-void BlendState::initPreMultDualBlendState(BlendDesc & desc)
+void BlendState::initPreMultDualBlendState(D3dBlendDesc & desc)
 {
 	desc = { 0 };
 	desc.AlphaToCoverageEnable = false;
@@ -644,7 +644,7 @@ void BlendState::initPreMultDualBlendState(BlendDesc & desc)
 	desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;			// src*0  + dst*1		, keep alpha intact
 	desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
 }
-void BlendState::initAdditiveState(BlendDesc & desc)
+void BlendState::initAdditiveState(D3dBlendDesc & desc)
 {
 	desc = { 0 };
 	desc.AlphaToCoverageEnable = false;
@@ -667,7 +667,7 @@ void BlendState::initAdditiveState(BlendDesc & desc)
 
 void appendSimpleVertexDataToInputLayout(InputLayoutDesc& inputLayout, const char* semanticName, DXGI_FORMAT format)
 {
-	InputElementDesc desc;
+	D3dInputElementDesc desc;
 
 	desc.SemanticName = semanticName;
 	desc.SemanticIndex = 0;
@@ -791,14 +791,14 @@ VertexShader::~VertexShader()
 	resetComPtr(&mVertexShader);
 }
 
-void VertexShader::createInputLayout(InputLayoutDesc inputLayout, InputLayout** layout)
+void VertexShader::createInputLayout(InputLayoutDesc inputLayout, D3dInputLayout** layout)
 {
 	ID3D11Device* device = g_dx11Device->getDevice();
 	HRESULT hr = device->CreateInputLayout(inputLayout.data(), uint32(inputLayout.size()), mShaderBuffer->GetBufferPointer(), mShaderBuffer->GetBufferSize(), layout);
 	ATLASSERT(hr == S_OK);
 }
 
-void VertexShader::setShader(RenderContext& context)
+void VertexShader::setShader(D3dRenderContext& context)
 {
 	if (recompileShaderIfNeeded())
 	{
@@ -823,7 +823,7 @@ PixelShader::~PixelShader()
 {
 	resetComPtr(&mPixelShader);
 }
-void PixelShader::setShader(RenderContext& context)
+void PixelShader::setShader(D3dRenderContext& context)
 {
 	if (recompileShaderIfNeeded())
 	{
@@ -848,7 +848,7 @@ HullShader::~HullShader()
 {
 	resetComPtr(&mHullShader);
 }
-void HullShader::setShader(RenderContext& context)
+void HullShader::setShader(D3dRenderContext& context)
 {
 	if (recompileShaderIfNeeded())
 	{
@@ -873,7 +873,7 @@ DomainShader::~DomainShader()
 {
 	resetComPtr(&mDomainShader);
 }
-void DomainShader::setShader(RenderContext& context)
+void DomainShader::setShader(D3dRenderContext& context)
 {
 	if (recompileShaderIfNeeded())
 	{
@@ -898,7 +898,7 @@ GeometryShader::~GeometryShader()
 {
 	resetComPtr(&mGeometryShader);
 }
-void GeometryShader::setShader(RenderContext& context)
+void GeometryShader::setShader(D3dRenderContext& context)
 {
 	if (recompileShaderIfNeeded())
 	{
@@ -923,7 +923,7 @@ ComputeShader::~ComputeShader()
 {
 	resetComPtr(&mComputeShader);
 }
-void ComputeShader::setShader(RenderContext& context)
+void ComputeShader::setShader(D3dRenderContext& context)
 {
 	if (recompileShaderIfNeeded())
 	{
@@ -1004,7 +1004,7 @@ void DxGpuPerformance::startGpuTimer(const char* name, unsigned char r, unsigned
 		timer = (*it).second;
 	}
 
-	RenderContext* context = g_dx11Device->getDeviceContext();
+	D3dRenderContext* context = g_dx11Device->getDeviceContext();
 	context->Begin(timer->mDisjointQueries[mMeasureTimerFrameId]);
 	context->End(timer->mBeginQueries[mMeasureTimerFrameId]);
 
@@ -1031,7 +1031,7 @@ void DxGpuPerformance::endGpuTimer(const char* name)
 {
 	DxGpuTimer* timer = mTimers[name];
 
-	RenderContext* context = g_dx11Device->getDeviceContext();
+	D3dRenderContext* context = g_dx11Device->getDeviceContext();
 	context->End(timer->mDisjointQueries[mMeasureTimerFrameId]);
 	context->End(timer->mEndQueries[mMeasureTimerFrameId]);
 	timer->mEnded = true;
@@ -1048,7 +1048,7 @@ void DxGpuPerformance::endFrame()
 	{
 		int32 localReadTimerFrameId = mReadTimerFrameId%V_GPU_TIMER_FRAMECOUNT;
 
-		RenderContext* context = g_dx11Device->getDeviceContext();
+		D3dRenderContext* context = g_dx11Device->getDeviceContext();
 		DxGpuPerformance::GpuTimerMap::iterator it;
 
 		// Get all the data first
