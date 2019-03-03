@@ -279,6 +279,7 @@ public:
 	SamplerState(D3dSamplerDesc& desc);
 	virtual ~SamplerState();
 	static D3dSamplerDesc initLinearClamp();
+	static D3dSamplerDesc initPointClamp();
 	static D3dSamplerDesc initShadowCmpClamp();
 	ID3D11SamplerState* mSampler = nullptr;
 private:

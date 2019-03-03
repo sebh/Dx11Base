@@ -531,6 +531,21 @@ D3dSamplerDesc SamplerState::initLinearClamp()
 	desc.MaxLOD = FLT_MAX;
 	return desc;
 }
+D3dSamplerDesc SamplerState::initPointClamp()
+{
+	D3dSamplerDesc desc = { 0 };
+	desc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+	desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+	desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+	desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+	desc.MipLODBias = 0.0f;
+	desc.MaxAnisotropy = 1;
+	desc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+	desc.BorderColor[0] = desc.BorderColor[1] = desc.BorderColor[2] = desc.BorderColor[3] = 1.0f;
+	desc.MinLOD = -FLT_MAX;
+	desc.MaxLOD = FLT_MAX;
+	return desc;
+}
 D3dSamplerDesc SamplerState::initShadowCmpClamp()
 {
 	D3dSamplerDesc desc = { 0 };
