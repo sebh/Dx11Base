@@ -36,7 +36,7 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	WindowHelper win(hInstance, clientRect, nCmdShow, L"D3D11 Application");
 	win.showWindow();
 
-	// Create the d3d device
+	// Create the d3d device (a singleton since we only consider a single window)
 	Dx11Device::initialise(win.getHwnd());
 	DxGpuPerformance::initialise();
 
@@ -53,6 +53,23 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	Game game;
 	game.initialise();
 
+
+	auto windowResizedCallback = [&](LPARAM lParam) 
+	{
+		// No threading mechanism so safe to do update call from here.
+
+		uint32 newWidth = LOWORD(lParam);
+		uint32 newHeight = HIWORD(lParam);
+
+		ImGui_ImplDX11_InvalidateDeviceObjects();
+		g_dx11Device->updateSwapChain(newWidth, newHeight);
+		ImGui_ImplDX11_CreateDeviceObjects();
+
+		game.reallocateResolutionDepedent(newWidth, newHeight);
+	};
+	win.setWindowResizedCallback(windowResizedCallback);
+
+
 	MSG msg = { 0 };
 	while (true)
 	{
@@ -64,23 +81,15 @@ int WINAPI WinMain(HINSTANCE hInstance,
 			ImGui_ImplWin32_WndProcHandler(msg.hwnd, msg.message, msg.wParam, msg.lParam);
 			ImGuiIO& io = ImGui::GetIO();
 			if (!(io.WantCaptureMouse || io.WantCaptureKeyboard))
-				win.processSingleMessage(msg);// A message has been processed and not consumed by imgui
-
-			if (msg.message == WM_KEYDOWN && msg.wParam == VK_ESCAPE)
-				break;// process escape key
-
-			if (msg.message == WM_QUIT)
-				break; // time to quit
-
-
-			// Take into account window resize
-			if (msg.message == WM_SIZE && g_dx11Device != NULL && msg.wParam != SIZE_MINIMIZED)
 			{
-				ImGui_ImplDX11_InvalidateDeviceObjects();
-				// clean up gpu data;		// TODO release swap chain, context and device
-				g_dx11Device->getSwapChain()->ResizeBuffers(0, (UINT)LOWORD(msg.lParam), (UINT)HIWORD(msg.lParam), DXGI_FORMAT_UNKNOWN, 0);
-				// re create gpu data();	// TODO
-				ImGui_ImplDX11_CreateDeviceObjects();
+				if (msg.message == WM_KEYDOWN && msg.wParam == VK_ESCAPE)
+					break;// process escape key
+
+				if (msg.message == WM_QUIT)
+					break; // time to quit
+
+				// A message has been processed and not consumed by imgui. Send the message to the WindowProc function.
+				DispatchMessage(&msg);
 			}
 		}
 		else

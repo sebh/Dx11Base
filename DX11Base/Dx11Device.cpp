@@ -82,24 +82,12 @@ void Dx11Device::internalInitialise(const HWND& hWnd)
 	ATLASSERT( hr == S_OK );
 #endif // DX_DEBUG_EVENT
 
-	// Create the back buffer RT
-	ID3D11Texture2D* backBufferTexture;// back buffer texture
-	mSwapchain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&backBufferTexture);
-	mDev->CreateRenderTargetView(backBufferTexture, NULL, &mBackBufferRT);
-	resetComPtr(&backBufferTexture);
+	updateSwapChain(0, 0);
 
-	// By default, set the back buffer as current render target and viewport (no sate tracking for now...)
-	mDevcon->OMSetRenderTargets(1, &mBackBufferRT, NULL); 
+	// By default, set the back buffer as current render target and viewport (no state tracking for now...)
+	mDevcon->OMSetRenderTargets(1, &mBackBufferRT, NULL);
+	mDevcon->RSSetViewports(1, &mBackBufferViewport);
 	
-	D3dViewport viewport;
-	ZeroMemory(&viewport, sizeof(D3dViewport));
-	viewport.TopLeftX = 0;
-	viewport.TopLeftY = 0;
-	viewport.Width = 1280;					// TODO manage that as it is not in sync with  D:\Projects\DX11Intro\dx11Intro\WindowHelper.cpp
-	viewport.Height = 720;
-	mDevcon->RSSetViewports(1, &viewport);
-
-
 	D3D_FEATURE_LEVEL deviceFeatureLevel = mDev->GetFeatureLevel();
 	OutputDebugStringA("\n\nSelected D3D feature level: ");
 	switch (deviceFeatureLevel)
@@ -140,6 +128,43 @@ void Dx11Device::internalShutdown()
 	resetComPtr(&mSwapchain);
 	resetComPtr(&mDev);
 	resetComPtr(&mDevcon);
+}
+
+void Dx11Device::updateSwapChain(uint32 newWidth, uint32 newHeight)
+{
+	resetComPtr(&mBackBufferRT);
+
+	if (newWidth > 0 && newHeight > 0)
+	{
+		mSwapchain->ResizeBuffers(0, newWidth, newHeight, DXGI_FORMAT_UNKNOWN, 0);
+
+		// Update the back buffer RT
+		ID3D11Texture2D* backBufferTexture;// back buffer texture
+		mSwapchain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&backBufferTexture);
+		mDev->CreateRenderTargetView(backBufferTexture, NULL, &mBackBufferRT);
+		resetComPtr(&backBufferTexture); // This does not delete the object. Just release the ref we just got.
+
+		mBackBufferViewport.Width = (float)newWidth;
+		mBackBufferViewport.Height = (float)newHeight;
+	}
+	else
+	{
+		// We get here when creating a Dx11Device
+		ID3D11Texture2D* backBufferTexture;// back buffer texture
+		mSwapchain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&backBufferTexture);
+		mDev->CreateRenderTargetView(backBufferTexture, NULL, &mBackBufferRT);
+
+		D3dTexture2dDesc texDesc;
+		backBufferTexture->GetDesc(&texDesc);
+		mBackBufferViewport.TopLeftX = 0.0f;
+		mBackBufferViewport.TopLeftY = 0.0f;
+		mBackBufferViewport.Width = (float)texDesc.Width;
+		mBackBufferViewport.Height = (float)texDesc.Height;
+		mBackBufferViewport.MinDepth = 0.0f;
+		mBackBufferViewport.MaxDepth = 1.0f;
+
+		resetComPtr(&backBufferTexture); // See description above.
+	}
 }
 
 void Dx11Device::swap(bool vsyncEnabled)

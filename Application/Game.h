@@ -12,6 +12,7 @@ public:
 	~Game();
 
 	void initialise();
+	void reallocateResolutionDepedent(uint32 newWidth, uint32 newHeight);
 	void shutdown();
 
 	void update(const WindowInputData& inputData);
@@ -24,6 +25,11 @@ private:
 	void loadShaders(bool firstTimeLoadShaders);
 	/// release all shaders
 	void releaseShaders();
+
+	void allocateResolutionIndependentResources();
+	void releaseResolutionIndependentResources();
+	void allocateResolutionDependentResources(uint32 newWidth, uint32 newHeight);
+	void releaseResolutionDependentResources();
 
 	// Test vertex buffer
 	struct VertexType

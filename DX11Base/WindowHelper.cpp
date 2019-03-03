@@ -4,11 +4,48 @@
 
 LRESULT CALLBACK WindowProcess(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
+	WindowHelper *window = (WindowHelper*)GetWindowLongPtr(hWnd, GWLP_USERDATA);
+
 	switch (message)
 	{
 	case WM_DESTROY:
 		PostQuitMessage(0);
 		return 0;
+		break;
+	}
+
+	switch (message)
+	{
+	case WM_MOUSEMOVE:
+	case WM_LBUTTONDOWN:
+	case WM_RBUTTONDOWN:
+	case WM_MBUTTONDOWN:
+	case WM_LBUTTONUP:
+	case WM_RBUTTONUP:
+	case WM_MBUTTONUP:
+	case WM_LBUTTONDBLCLK:
+	case WM_RBUTTONDBLCLK:
+	case WM_MBUTTONDBLCLK:
+	case WM_NCMOUSELEAVE:
+	case WM_MOUSEWHEEL:
+	case WM_MOUSEHWHEEL:
+		window->processMouseMessage(message, wParam, lParam);
+		break;
+
+	case WM_KEYDOWN:
+	case WM_KEYUP:
+	case WM_CHAR:
+	case WM_SYSCHAR:
+		window->processKeyMessage(message, wParam, lParam);
+		break;
+
+	case WM_SIZE:
+	//case WM_SIZING:	// When receiving that message, the backbuffer we get is null for some reason. Would be good to still see image on screen.
+	// Also it seems that this is not even enough to handle a windo going full screen. Using Atl+Enter make things crash of lock up.
+		if (wParam != SIZE_MINIMIZED)
+		{
+			window->processWindowSizeMessage(message, wParam, lParam);
+		}
 		break;
 	}
 
@@ -26,7 +63,7 @@ WindowHelper::WindowHelper(HINSTANCE hInstance, const RECT& clientRect, int nCmd
 
 	// And create the rectangle that will allow it
 	RECT rect = { 0, 0, clientRect.right - clientRect.left, clientRect.bottom - clientRect.top }; // set the size, but not the position otherwise does not seem to work
-	DWORD style = (WS_OVERLAPPED | WS_SYSMENU | WS_CAPTION | WS_MINIMIZEBOX | WS_MAXIMIZEBOX); // WS_OVERLAPPEDWINDOW, add simple style as paramter
+	DWORD style = (WS_OVERLAPPEDWINDOW | WS_SYSMENU | WS_CAPTION | WS_MINIMIZEBOX | WS_MAXIMIZEBOX); // WS_OVERLAPPED without edge resize, WS_OVERLAPPEDWINDOW with
 	BOOL menu = false;
 	AdjustWindowRect(&rect, style, menu);
 	//Get the required window dimensions
@@ -64,6 +101,9 @@ WindowHelper::WindowHelper(HINSTANCE hInstance, const RECT& clientRect, int nCmd
 		NULL,								// we aren't using menus, NULL
 		hInstance,							// application handle
 		NULL);								// used with multiple windows, NULL
+
+	SetWindowLongPtr(mHWnd, GWLP_USERDATA, (LONG_PTR)(this));
+	SetWindowPos(mHWnd, 0, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER); // Make sure the pointer is cached  https://docs.microsoft.com/en-us/windows/desktop/api/winuser/nf-winuser-setwindowlongptra
 }
 
 WindowHelper::~WindowHelper()
@@ -77,17 +117,17 @@ void WindowHelper::showWindow()
 }
 
 
-void WindowHelper::processMouseMessage(MSG& msg)
+void WindowHelper::processMouseMessage(UINT message, WPARAM wParam, LPARAM lParam)
 {
 	// TODO WM_NCMOUSELEAVE 
 
-	mInput.mInputStatus.mouseX = LOWORD(msg.lParam);
-	mInput.mInputStatus.mouseY = HIWORD(msg.lParam);
+	mInput.mInputStatus.mouseX = LOWORD(lParam);
+	mInput.mInputStatus.mouseY = HIWORD(lParam);
 
 	InputEvent event;
 	event.mouseX = mInput.mInputStatus.mouseX;
 	event.mouseY = mInput.mInputStatus.mouseY;
-	switch (msg.message)
+	switch (message)
 	{
 	case WM_MOUSEMOVE:
 		event.type = etMouseMoved;
@@ -142,9 +182,9 @@ void WindowHelper::processMouseMessage(MSG& msg)
 	mInput.mInputEvents.push_back(event);
 }
 
-InputKey translateKey(MSG& msg)
+static InputKey translateKey(WPARAM wParam)
 {
-	switch (msg.wParam)
+	switch (wParam)
 	{
 	case VK_RIGHT: 					return kRight;
 	case VK_LEFT: 					return kLeft;
@@ -226,17 +266,17 @@ InputKey translateKey(MSG& msg)
 	}
 }
 
-void WindowHelper::processKeyMessage(MSG& msg)
+void WindowHelper::processKeyMessage(UINT message, WPARAM wParam, LPARAM lParam)
 {
 	InputEvent event;
 	event.mouseX = mInput.mInputStatus.mouseX;
 	event.mouseY = mInput.mInputStatus.mouseY;
 
-	event.key = translateKey(msg);
+	event.key = translateKey(wParam);
 	if (event.key == kUnknown)
 		return;	// unkown key so do not register the event.
 
-	switch (msg.message)
+	switch (message)
 	{
 	case WM_KEYDOWN:
 		event.type = etKeyDown;
@@ -267,6 +307,11 @@ void WindowHelper::processKeyMessage(MSG& msg)
 	mInput.mInputEvents.push_back(event);
 }
 
+void WindowHelper::processWindowSizeMessage(UINT message, WPARAM wParam, LPARAM lParam)
+{
+	mWindowResizedCallback(lParam);
+}
+
 bool WindowHelper::translateSingleMessage(MSG& msg)
 {
 	if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
@@ -280,36 +325,4 @@ bool WindowHelper::translateSingleMessage(MSG& msg)
 
 	// No message translated
 	return false;
-}
-
-void WindowHelper::processSingleMessage(MSG& msg)
-{
-	// send the message to the WindowProc function
-	DispatchMessage(&msg);
-
-	switch (msg.message)
-	{
-	case WM_MOUSEMOVE:
-	case WM_LBUTTONDOWN:
-	case WM_RBUTTONDOWN:
-	case WM_MBUTTONDOWN:
-	case WM_LBUTTONUP:
-	case WM_RBUTTONUP:
-	case WM_MBUTTONUP:
-	case WM_LBUTTONDBLCLK:
-	case WM_RBUTTONDBLCLK:
-	case WM_MBUTTONDBLCLK:
-	case WM_NCMOUSELEAVE:
-	case WM_MOUSEWHEEL:
-	case WM_MOUSEHWHEEL:
-		processMouseMessage(msg);
-		break;
-
-	case WM_KEYDOWN:
-	case WM_KEYUP:
-	case WM_CHAR:
-	case WM_SYSCHAR:
-		processKeyMessage(msg);
-		break;
-	}
 }

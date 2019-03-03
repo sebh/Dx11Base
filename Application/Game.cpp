@@ -46,10 +46,6 @@ void Game::loadShaders(bool firstTimeLoadShaders)
 	appendSimpleVertexDataToInputLayout(inputLayout, "POSITION", DXGI_FORMAT_R32G32B32_FLOAT);
 	resetComPtr(&mLayout);
 	mVertexShader->createInputLayout(inputLayout, &mLayout);	// Have a layout object with vertex stride in it
-
-	mBackBufferDepth = new Texture2D(Texture2D::initDepthStencilBuffer(1280, 720, false));
-
-	mBackBufferHdr = new Texture2D(Texture2D::initDefault(DXGI_FORMAT_R32G32B32A32_FLOAT, 1280, 720, true, true));
 }
 
 void Game::releaseShaders()
@@ -62,9 +58,6 @@ void Game::releaseShaders()
 	resetPtr(&mColoredTrianglesShader);
 	resetPtr(&mToyShader);
 	resetPtr(&mPostProcessShader);
-
-	resetPtr(&mBackBufferHdr);
-	resetPtr(&mBackBufferDepth);
 }
 
 
@@ -77,21 +70,32 @@ void Game::initialise()
 	////////// Create other resources
 
 	D3dDevice* device = g_dx11Device->getDevice();
+	const D3dViewport& viewport = g_dx11Device->getBackBufferViewport();
+	allocateResolutionIndependentResources();
+	allocateResolutionDependentResources(viewport.Width, viewport.Height);
+}
+
+void Game::reallocateResolutionDepedent(uint32 newWidth, uint32 newHeight)
+{
+	releaseResolutionDependentResources();
+	allocateResolutionDependentResources(newWidth, newHeight);
+}
+
+
+void Game::allocateResolutionIndependentResources()
+{
+	D3dDevice* device = g_dx11Device->getDevice();
 
 	// Simple triangle geometry
 	VertexType vertices[3];
-	vertices[0]  = { { 0.0f, 0.0f, 0.0f } };
-	vertices[1]  = { { 0.0f, 0.5f, 0.0f } };
-	vertices[2]  = { { 0.5f, 0.0f, 0.0f } };
+	vertices[0] = { { 0.0f, 0.0f, 0.0f } };
+	vertices[1] = { { 0.0f, 0.5f, 0.0f } };
+	vertices[2] = { { 0.5f, 0.0f, 0.0f } };
 	uint32 indices[3];
 	indices[0] = 0;
 	indices[1] = 1;
 	indices[2] = 2;
-
-
-	// Create 
 	vertexBuffer = new RenderBuffer(RenderBuffer::initVertexBufferDesc_default(sizeof(vertices)), vertices);
-
 	indexBuffer = new RenderBuffer(RenderBuffer::initIndexBufferDesc_default(sizeof(indices)), indices);
 
 	mConstantBuffer = new CommonConstantBuffer();
@@ -115,10 +119,8 @@ void Game::initialise()
 	mDefaultBlendState = new BlendState(BlendState::initDisabledState());
 }
 
-void Game::shutdown()
+void Game::releaseResolutionIndependentResources()
 {
-	////////// Release resources
-
 	resetPtr(&mConstantBuffer);
 	resetPtr(&indexBuffer);
 	resetPtr(&vertexBuffer);
@@ -129,6 +131,26 @@ void Game::shutdown()
 	resetPtr(&mDefaultDepthStencilState);
 	resetPtr(&mDefaultBlendState);
 	resetPtr(&mDefaultRasterizerState);
+}
+
+void Game::allocateResolutionDependentResources(uint32 newWidth, uint32 newHeight)
+{
+	mBackBufferDepth = new Texture2D(Texture2D::initDepthStencilBuffer(newWidth, newHeight, false));
+	mBackBufferHdr = new Texture2D(Texture2D::initDefault(DXGI_FORMAT_R32G32B32A32_FLOAT, newWidth, newHeight, true, true));
+}
+
+void Game::releaseResolutionDependentResources()
+{
+	resetPtr(&mBackBufferHdr);
+	resetPtr(&mBackBufferDepth);
+}
+
+void Game::shutdown()
+{
+	////////// Release resources
+
+	releaseResolutionIndependentResources();
+	releaseResolutionDependentResources();
 
 	////////// Release shaders
 
@@ -161,6 +183,7 @@ void Game::render()
 {
 	GPU_SCOPED_TIMEREVENT(GameRender, 75, 75, 75);
 
+	const D3dViewport& backBufferViewport = g_dx11Device->getBackBufferViewport();
 	D3dRenderContext* context = g_dx11Device->getDeviceContext();
 	D3dRenderTargetView* backBuffer = g_dx11Device->getBackBufferRT();
 
@@ -183,16 +206,7 @@ void Game::render()
 		context->OMSetDepthStencilState(mDefaultDepthStencilState->mState, 0);
 		context->OMSetBlendState(mDefaultBlendState->mState, nullptr, 0xffffffff);
 		context->RSSetState(mDefaultRasterizerState->mState);
-
-		D3dViewport viewport;
-		ZeroMemory(&viewport, sizeof(D3dViewport));
-		viewport.TopLeftX = 0;
-		viewport.TopLeftY = 0;
-		viewport.Width = 1280;					// TODO manage that as it is not in sync with  D:\Projects\DX11Intro\dx11Intro\WindowHelper.cpp
-		viewport.Height = 720;
-		viewport.MinDepth = 0.0f;
-		viewport.MaxDepth = 1.0f;
-		context->RSSetViewports(1, &viewport);
+		context->RSSetViewports(1, &backBufferViewport);
 	}
 
 	// Clear the HDR back buffer

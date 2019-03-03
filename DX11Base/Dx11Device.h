@@ -93,6 +93,9 @@ public:
 		devcon->CSSetUnorderedAccessViews(0, 8, null, nullptr);
 	}
 
+	const D3dViewport& getBackBufferViewport() const { return mBackBufferViewport; }
+	void updateSwapChain(uint32 newWidth, uint32 newHeight);
+
 private:
 	Dx11Device();
 	Dx11Device(Dx11Device&);
@@ -107,6 +110,8 @@ private:
 	D3dRenderContext*						mDevcon;				// the pointer to our Direct3D device context
 
 	D3dRenderTargetView*					mBackBufferRT;			// back buffer render target
+
+	D3dViewport								mBackBufferViewport;
 };
 
 extern Dx11Device* g_dx11Device;
