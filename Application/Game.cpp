@@ -101,7 +101,7 @@ void Game::allocateResolutionIndependentResources()
 	mConstantBuffer = new CommonConstantBuffer();
 
 	uint32 bufferElementSize = (sizeof(float) * 4);
-	uint32 bufferElementCount = 1280 * 720;
+	uint32 bufferElementCount = 1024;
 	D3dBufferDesc someBufferDesc = { bufferElementCount * bufferElementSize , D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS, 0, 0, 0 };
 	mSomeBuffer = new RenderBuffer(someBufferDesc);
 
@@ -196,8 +196,8 @@ void Game::render()
 		CommonConstantBufferStructure cb;
 		cb.gViewProjMat = mViewProjMat;
 		cb.gColor = { 0.0, 1.0, 1.0, 1.0 };
-		cb.gResolution[0] = 1280;
-		cb.gResolution[1] = 720;
+		cb.gResolution[0] = backBufferViewport.Width;
+		cb.gResolution[1] = backBufferViewport.Height;
 		mConstantBuffer->update(cb);
 	}
 
@@ -226,8 +226,8 @@ void Game::render()
 		context->CSSetConstantBuffers(0, 1, &mConstantBuffer->mBuffer);
 		context->CSSetUnorderedAccessViews(0, 1, &mBackBufferHdr->mUnorderedAccessView, nullptr);
 
-		int32 sX = divRoundUp(mBackBufferHdr->mDesc.Width, 8);
-		int32 sY = divRoundUp(mBackBufferHdr->mDesc.Height, 8);
+		int32 sX = divRoundUp(backBufferViewport.Width, 8);
+		int32 sY = divRoundUp(backBufferViewport.Height, 8);
 
 		context->Dispatch(sX, sY, 1);
 		g_dx11Device->setNullCsResources(context);
