@@ -65,7 +65,7 @@ int WINAPI WinMain(HINSTANCE hInstance,
 		g_dx11Device->updateSwapChain(newWidth, newHeight);
 		ImGui_ImplDX11_CreateDeviceObjects();
 
-		game.reallocateResolutionDepedent(newWidth, newHeight);
+		game.reallocateResolutionDependent(newWidth, newHeight);
 	};
 	win.setWindowResizedCallback(windowResizedCallback);
 

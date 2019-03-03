@@ -12,7 +12,7 @@ public:
 	~Game();
 
 	void initialise();
-	void reallocateResolutionDepedent(uint32 newWidth, uint32 newHeight);
+	void reallocateResolutionDependent(uint32 newWidth, uint32 newHeight);
 	void shutdown();
 
 	void update(const WindowInputData& inputData);

@@ -75,7 +75,7 @@ void Game::initialise()
 	allocateResolutionDependentResources(viewport.Width, viewport.Height);
 }
 
-void Game::reallocateResolutionDepedent(uint32 newWidth, uint32 newHeight)
+void Game::reallocateResolutionDependent(uint32 newWidth, uint32 newHeight)
 {
 	releaseResolutionDependentResources();
 	allocateResolutionDependentResources(newWidth, newHeight);
