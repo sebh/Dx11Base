@@ -261,9 +261,10 @@ class Texture3D
 public:
 	Texture3D(D3dTexture3dDesc& desc, D3dSubResourceData* initialData = nullptr);
 	virtual ~Texture3D();
-	static D3dTexture3dDesc initDefault(DXGI_FORMAT format, uint32 width, uint32 height, uint32 depth, bool uav);
+	static D3dTexture3dDesc initDefault(DXGI_FORMAT format, uint32 width, uint32 height, uint32 depth, bool renderTarget, bool uav);
 	D3dTexture3dDesc mDesc;
 	ID3D11Texture3D* mTexture = nullptr;
+	D3dRenderTargetView* mRenderTargetView = nullptr;				// level 0
 	D3dShaderResourceView* mShaderResourceView = nullptr;			// level 0
 	D3dUnorderedAccessView* mUnorderedAccessView = nullptr;			// level 0
 	std::vector<D3dShaderResourceView*> mShaderResourceViewMips;		// all levels

@@ -467,6 +467,16 @@ Texture3D::Texture3D(D3dTexture3dDesc& desc, D3dSubResourceData* initialData) :
 			}
 		}
 	}
+	if (mDesc.BindFlags & D3D11_BIND_RENDER_TARGET)
+	{
+		CD3D11_RENDER_TARGET_VIEW_DESC renderTargetViewDesc(D3D11_RTV_DIMENSION_TEXTURE3D);
+		renderTargetViewDesc.Format = desc.Format;
+		renderTargetViewDesc.Texture3D.MipSlice = 0;
+		renderTargetViewDesc.Texture3D.FirstWSlice = 0;
+		renderTargetViewDesc.Texture3D.WSize = desc.Depth;
+		HRESULT hr = device->CreateRenderTargetView(mTexture, &renderTargetViewDesc, &mRenderTargetView);
+		ATLASSERT(hr == S_OK);
+	}
 }
 Texture3D::~Texture3D()
 {
@@ -489,8 +499,12 @@ Texture3D::~Texture3D()
 		mUnorderedAccessViewMips.clear();
 	}
 	resetComPtr(&mTexture);
+	if (mDesc.BindFlags & D3D11_BIND_RENDER_TARGET)
+	{
+		resetComPtr(&mRenderTargetView);
+	}
 }
-D3dTexture3dDesc Texture3D::initDefault(DXGI_FORMAT format, uint32 width, uint32 height, uint32 depth, bool uav)
+D3dTexture3dDesc Texture3D::initDefault(DXGI_FORMAT format, uint32 width, uint32 height, uint32 depth, bool renderTarget, bool uav)
 {
 	D3dTexture3dDesc desc = { 0 };
 	desc.Width = width;
@@ -499,7 +513,7 @@ D3dTexture3dDesc Texture3D::initDefault(DXGI_FORMAT format, uint32 width, uint32
 	desc.MipLevels = 1;
 	desc.Format = format;
 	desc.Usage = D3D11_USAGE_DEFAULT;
-	desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | (uav ? D3D11_BIND_UNORDERED_ACCESS : 0);
+	desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | (renderTarget ? D3D11_BIND_RENDER_TARGET : 0) | (uav ? D3D11_BIND_UNORDERED_ACCESS : 0);
 	desc.CPUAccessFlags = 0;
 	desc.MiscFlags = 0;
 	return desc;
