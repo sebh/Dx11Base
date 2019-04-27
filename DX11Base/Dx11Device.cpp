@@ -2,6 +2,7 @@
 #include "Dx11Device.h"
 #include "D3Dcompiler.h"
 #include "Strsafe.h"
+#include <comdef.h> // _com_error
 #include <iostream>
 
 // Good dx tutorial: http://www.directxtutorial.com/Lesson.aspx?lessonid=11-4-2
@@ -799,6 +800,10 @@ static ID3D10Blob* compileShader(const TCHAR* filename, const char* entryFunctio
 		OutputDebugStringA(", file=");
 		OutputDebugStringW(filename);
 		OutputDebugStringA(" :\n");
+		OutputDebugStringA(" HResult = "); 
+		_com_error err(hr);
+		OutputDebugStringW(err.ErrorMessage());
+		OutputDebugStringA("\n");
 		if (errorbuffer)
 		{
 			OutputDebugStringA((char*)errorbuffer->GetBufferPointer());
